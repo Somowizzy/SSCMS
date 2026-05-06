@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Smart Supply Chain Management Software for Preform & Cap Production - Real-time inventory, production tracking, and AI-powered forecasting">
+  <title>SSCMS - Smart Supply Chain Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-screen">
+      <div class="login-particles" id="login-particles"></div>
+      <div class="login-container">
+        <div class="login-card">
+          <div class="login-logo">
+            <div class="logo-icon">
+              <i class="fas fa-cubes"></i>
+            </div>
+            <h1>SSCMS</h1>
+            <p class="login-subtitle">Smart Supply Chain Management System</p>
+            <p class="login-company">Preform & Cap Production Company</p>
+          </div>
+          <form id="login-form" autocomplete="off">
+            <div class="form-group">
+              <label for="login-email"><i class="fas fa-envelope"></i> Email Address</label>
+              <input type="email" id="login-email" placeholder="Enter your email" required>
+            </div>
+            <div class="form-group">
+              <label for="login-password"><i class="fas fa-lock"></i> Password</label>
+              <div class="password-wrapper">
+                <input type="password" id="login-password" placeholder="Enter your password" required>
+                <button type="button" class="toggle-password" onclick="togglePassword()">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div id="login-error" class="login-error" style="display:none;"></div>
+            <button type="submit" class="btn-login" id="login-btn">
+              <span class="btn-text">Sign In</span>
+              <span class="btn-loader" style="display:none;"><i class="fas fa-spinner fa-spin"></i></span>
+            </button>
+          </form>
+          <div class="login-footer">
+            <p>Default Admin: <strong>admin@sscms.com</strong> / <strong>admin123</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main App Layout -->
+    <div id="main-app" class="main-app" style="display:none;">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <i class="fas fa-cubes"></i>
+            <span>SSCMS</span>
+          </div>
+          <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+          </button>
+        </div>
+        <nav id="sidebar-nav" class="sidebar-nav"></nav>
+        <div class="sidebar-footer">
+          <div class="user-info" id="sidebar-user-info"></div>
+          <button class="btn-logout" onclick="handleLogout()">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <!-- Top Bar -->
+        <header class="topbar">
+          <div class="topbar-left">
+            <button class="mobile-menu-btn" onclick="toggleSidebar()">
+              <i class="fas fa-bars"></i>
+            </button>
+            <div class="breadcrumb" id="breadcrumb"></div>
+          </div>
+          <div class="topbar-right">
+            <div class="search-bar">
+              <i class="fas fa-search"></i>
+              <input type="text" placeholder="Search..." id="global-search">
+            </div>
+            <div class="notification-bell" id="notification-bell" onclick="toggleNotifications()">
+              <i class="fas fa-bell"></i>
+              <span class="notification-badge" id="notification-badge" style="display:none;">0</span>
+            </div>
+            <div class="notification-panel" id="notification-panel" style="display:none;">
+              <div class="notification-header">
+                <h3>Notifications</h3>
+                <button onclick="markAllRead()">Mark all read</button>
+              </div>
+              <div class="notification-list" id="notification-list"></div>
+            </div>
+            <div class="user-avatar" id="topbar-user">
+              <div class="avatar-circle" id="avatar-initials"></div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="page-content" id="page-content">
+          <!-- Dynamic content loaded here -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div class="modal-overlay" id="modal-overlay" style="display:none;" onclick="closeModal()">
+    <div class="modal-content" id="modal-content" onclick="event.stopPropagation()"></div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/js/api.js"></script>
+  <script src="/js/components/login.js"></script>
+  <script src="/js/components/sidebar.js"></script>
+  <script src="/js/components/dashboard.js?v=2"></script>
+  <script src="/js/components/inventory.js"></script>
+  <script src="/js/components/production.js"></script>
+  <script src="/js/components/finishedGoods.js"></script>
+  <script src="/js/components/shipping.js"></script>
+  <script src="/js/components/requests.js"></script>
+  <script src="/js/components/users.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

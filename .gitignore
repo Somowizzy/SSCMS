@@ -1,0 +1,11 @@
+node_modules/
+.env
+data/sscms.db
+*.log
+.DS_Store
+Thumbs.db
+extracted_content.txt
+extract_docx.ps1
+downloaded_dashboard.js
+scratch_test.js
+*.docx
