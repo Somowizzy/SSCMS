@@ -18,12 +18,24 @@ window.RequestsComponent = {
         </div>
       `;
 
-      // Status filters
+      const requests = data.requests || [];
+
+      // Summary cards
+      const pending = requests.filter(r => r.status === 'pending').length;
+      const approved = requests.filter(r => r.status === 'approved').length;
+      const rejected = requests.filter(r => r.status === 'rejected').length;
+
       html += `
-        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-          <div class="badge badge-warning" style="font-size: 0.9rem; padding: 0.5rem 1rem; cursor: pointer;">Pending Approvals</div>
-          <div class="badge badge-success" style="font-size: 0.9rem; padding: 0.5rem 1rem; cursor: pointer; opacity: 0.7;">Approved</div>
-          <div class="badge badge-danger" style="font-size: 0.9rem; padding: 0.5rem 1rem; cursor: pointer; opacity: 0.7;">Rejected</div>
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <div class="badge badge-warning" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+            <i class="fas fa-clock"></i> Pending: ${pending}
+          </div>
+          <div class="badge badge-success" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+            <i class="fas fa-check"></i> Approved: ${approved}
+          </div>
+          <div class="badge badge-danger" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+            <i class="fas fa-times"></i> Rejected: ${rejected}
+          </div>
         </div>
       `;
 
@@ -44,8 +56,8 @@ window.RequestsComponent = {
                 </tr>
               </thead>
               <tbody>
-                ${data.requests.length === 0 ? '<tr><td colspan="7" class="text-center text-muted">No requests found</td></tr>' : ''}
-                ${data.requests.map(req => this.createTableRow(req, currentUser)).join('')}
+                ${requests.length === 0 ? '<tr><td colspan="7" class="text-center text-muted">No requests found</td></tr>' : ''}
+                ${requests.map(req => this.createTableRow(req, currentUser)).join('')}
               </tbody>
             </table>
           </div>
@@ -55,7 +67,28 @@ window.RequestsComponent = {
       container.innerHTML = html;
 
     } catch (err) {
-      container.innerHTML = `<div class="login-error text-center p-3">${err.message}</div>`;
+      console.error('Requests render error:', err);
+      container.innerHTML = `
+        <div class="page-header">
+          <div class="page-title">
+            <h1>Inter-Department Requests</h1>
+            <p>Manage requisitions, transfers, and approvals.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="window.RequestsComponent.showAddModal()">
+              <i class="fas fa-plus"></i> New Request
+            </button>
+          </div>
+        </div>
+        <div class="content-card" style="padding: 2rem; text-align: center;">
+          <i class="fas fa-exclamation-triangle text-warning" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+          <h3>Unable to Load Requests</h3>
+          <p class="text-muted">${err.message}</p>
+          <button class="btn btn-primary" style="margin-top: 1rem;" onclick="window.RequestsComponent.render(document.getElementById('page-content'))">
+            <i class="fas fa-redo"></i> Retry
+          </button>
+        </div>
+      `;
     }
   },
 
@@ -66,13 +99,16 @@ window.RequestsComponent = {
     
     if (req.status === 'approved') { statusClass = 'success'; statusLabel = 'Approved'; iconClass = 'fa-check'; }
     if (req.status === 'rejected') { statusClass = 'danger'; statusLabel = 'Rejected'; iconClass = 'fa-times'; }
+    if (req.status === 'in_progress') { statusClass = 'info'; statusLabel = 'In Progress'; iconClass = 'fa-spinner'; }
+    if (req.status === 'completed') { statusClass = 'success'; statusLabel = 'Completed'; iconClass = 'fa-check-double'; }
 
-    let typeFormatted = req.request_type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    const requestType = req.request_type || 'unknown';
+    let typeFormatted = requestType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
     // Detail format
     let details = '';
     if (req.product_name) {
-      details = `<strong>${req.quantity}</strong> ${req.product_unit} of <strong>${req.product_name}</strong>`;
+      details = `<strong>${req.quantity || 0}</strong> ${req.product_unit || 'units'} of <strong>${req.product_name}</strong>`;
     } else if (req.quantity > 0) {
       details = `Quantity: <strong>${req.quantity}</strong>`;
     }
@@ -83,20 +119,19 @@ window.RequestsComponent = {
     }
 
     // Determine if user can approve
-    // User is an admin OR user is the head of the target department
-    const isAdmin = user.role === 'hr_admin' || user.role === 'system_admin';
-    const isTargetDeptHead = user.role === 'dept_head' && (req.target_department_id === user.departmentId || (!req.target_department_id && req.department_id === user.departmentId));
+    const isAdmin = user && (user.role === 'hr_admin' || user.role === 'system_admin');
+    const isTargetDeptHead = user && user.role === 'dept_head' && (req.target_department_id === user.departmentId || (!req.target_department_id && req.department_id === user.departmentId));
     const canApprove = req.status === 'pending' && (isAdmin || isTargetDeptHead);
 
     return `
       <tr>
         <td>
           <div style="font-weight: 500;">${typeFormatted}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">REQ-${req.id.toString().padStart(4, '0')} | Prio: ${req.priority}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">REQ-${String(req.id).padStart(4, '0')} | Prio: ${req.priority || 'normal'}</div>
         </td>
         <td>
-          <div>${req.requester_name}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">${req.department_name}</div>
+          <div>${req.requester_name || 'Unknown'}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">${req.department_name || '-'}</div>
         </td>
         <td>${req.target_department_name || '-'}</td>
         <td style="max-width: 200px;">${details}</td>
@@ -131,7 +166,7 @@ window.RequestsComponent = {
     let inventory = [];
     try {
       const res = await window.api.get('/inventory');
-      inventory = res.items;
+      inventory = res.items || [];
     } catch (e) { console.error('Failed to load inventory'); }
 
     const html = `
@@ -148,7 +183,7 @@ window.RequestsComponent = {
               <option value="transfer_to_fg">Transfer to Finished Goods</option>
               <option value="shipping_request">Shipping Request</option>
               <option value="stock_adjustment">Stock Adjustment / Correction</option>
-              <option value="other">Other Request</option>
+              <option value="production_run">Production Run Request</option>
             </select>
           </div>
           
@@ -214,6 +249,7 @@ window.RequestsComponent = {
       prodFields.style.display = 'none';
       if (type === 'transfer_to_fg') targetDept.value = "3";
       if (type === 'shipping_request') targetDept.value = "4";
+      if (type === 'production_run') targetDept.value = "2";
     }
   },
 
@@ -253,7 +289,6 @@ window.RequestsComponent = {
   async handleAction(id, action) {
     if (!confirm(`Are you sure you want to mark this request as ${action}?`)) return;
     
-    // In a real app, we'd open a modal to ask for a comment. Keeping simple here.
     try {
       await window.api.patch(`/requests/${id}/approve`, { action, comment: '' });
       window.showToast(`Request ${action} successfully`);

@@ -113,7 +113,7 @@ window.UsersComponent = {
           <div class="grid-2">
             <div class="form-group">
               <label>Role*</label>
-              <select id="user-role" required>
+              <select id="user-role" required onchange="window.UsersComponent.handleRoleChange('add')">
                 <option value="dept_user">Department User</option>
                 <option value="dept_head">Department Head</option>
                 <option value="hr_admin">HR & Admin</option>
@@ -134,7 +134,7 @@ window.UsersComponent = {
           
           <div class="form-group">
             <label>Initial Password*</label>
-            <input type="password" id="user-pwd" required minlength="6">
+            <input type="password" id="user-pwd" required minlength="6" value="#1234#">
           </div>
           
           <div class="modal-footer" style="padding: 1.5rem 0 0 0;">
@@ -145,6 +145,62 @@ window.UsersComponent = {
       </div>
     `;
     window.openModal(html);
+
+    // Apply initial role logic (default is dept_user, so hide HR & Admin from dept)
+    this.handleRoleChange('add');
+  },
+
+  /**
+   * Handles role selection change to enforce business rules:
+   * - HR & Admin role → auto-select HR & Admin dept, lock it
+   * - Dept User / Dept Head → remove HR & Admin from department options
+   */
+  handleRoleChange(mode) {
+    const prefix = mode === 'add' ? '' : 'edit-';
+    const roleSelect = document.getElementById(`${prefix}user-role`);
+    const deptSelect = document.getElementById(`${prefix}user-dept`);
+    if (!roleSelect || !deptSelect) return;
+
+    const selectedRole = roleSelect.value;
+
+    if (selectedRole === 'hr_admin') {
+      // Auto-set department to HR & Admin (id=5) and disable selection
+      // First ensure the HR & Admin option exists
+      let hrOption = deptSelect.querySelector('option[value="5"]');
+      if (!hrOption) {
+        hrOption = document.createElement('option');
+        hrOption.value = '5';
+        hrOption.textContent = 'HR & Admin';
+        deptSelect.appendChild(hrOption);
+      }
+      // Show all options but select HR & Admin
+      Array.from(deptSelect.options).forEach(opt => {
+        opt.style.display = '';
+      });
+      deptSelect.value = '5';
+      deptSelect.disabled = true;
+      deptSelect.style.opacity = '0.7';
+      deptSelect.style.cursor = 'not-allowed';
+    } else {
+      // dept_user or dept_head: hide HR & Admin from department options
+      deptSelect.disabled = false;
+      deptSelect.style.opacity = '1';
+      deptSelect.style.cursor = '';
+
+      // If currently set to HR & Admin, reset to none
+      if (deptSelect.value === '5') {
+        deptSelect.value = '';
+      }
+
+      // Hide the HR & Admin option (value="5")
+      Array.from(deptSelect.options).forEach(opt => {
+        if (opt.value === '5') {
+          opt.style.display = 'none';
+        } else {
+          opt.style.display = '';
+        }
+      });
+    }
   },
 
   async submitAdd(e) {
@@ -153,14 +209,22 @@ window.UsersComponent = {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
 
+    // Re-enable dept select temporarily so we can read its value
+    const deptSelect = document.getElementById('user-dept');
+    const wasDisabled = deptSelect.disabled;
+    deptSelect.disabled = false;
+
     const data = {
       firstName: document.getElementById('user-fname').value,
       lastName: document.getElementById('user-lname').value,
       email: document.getElementById('user-email').value,
       role: document.getElementById('user-role').value,
-      departmentId: document.getElementById('user-dept').value || null,
+      departmentId: deptSelect.value || null,
       password: document.getElementById('user-pwd').value
     };
+
+    // Restore disabled state
+    deptSelect.disabled = wasDisabled;
 
     try {
       await window.api.post('/users', data);
@@ -185,7 +249,7 @@ window.UsersComponent = {
           <div class="grid-2">
             <div class="form-group">
               <label>Role</label>
-              <select id="edit-user-role" required>
+              <select id="edit-user-role" required onchange="window.UsersComponent.handleRoleChange('edit')">
                 <option value="dept_user" ${u.role === 'dept_user' ? 'selected' : ''}>Department User</option>
                 <option value="dept_head" ${u.role === 'dept_head' ? 'selected' : ''}>Department Head</option>
                 <option value="hr_admin" ${u.role === 'hr_admin' ? 'selected' : ''}>HR & Admin</option>
@@ -220,6 +284,9 @@ window.UsersComponent = {
       </div>
     `;
     window.openModal(html);
+
+    // Apply role logic based on current user's role
+    this.handleRoleChange('edit');
   },
 
   async submitEdit(e, id) {
@@ -228,11 +295,19 @@ window.UsersComponent = {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
+    // Re-enable dept select temporarily so we can read its value
+    const deptSelect = document.getElementById('edit-user-dept');
+    const wasDisabled = deptSelect.disabled;
+    deptSelect.disabled = false;
+
     const data = {
       role: document.getElementById('edit-user-role').value,
-      departmentId: document.getElementById('edit-user-dept').value || null,
+      departmentId: deptSelect.value || null,
       isActive: document.getElementById('edit-user-status').value === "1"
     };
+
+    // Restore disabled state
+    deptSelect.disabled = wasDisabled;
 
     try {
       await window.api.patch(`/users/${id}`, data);
