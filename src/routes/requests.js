@@ -61,9 +61,15 @@ router.get('/', authenticate, (req, res) => {
   }
 });
 
-// POST /api/requests - Create new request
+// POST /api/requests - Create new request (dept_head and above only)
 router.post('/', authenticate, (req, res) => {
   try {
+    // Only dept_head, hr_admin, system_admin can submit requests
+    const allowedRoles = ['dept_head', 'hr_admin', 'system_admin'];
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Only Department Heads can submit requests' });
+    }
+
     const { requestType, targetDepartmentId, productId, quantity, priority, notes } = req.body;
     if (!requestType) return res.status(400).json({ error: 'Request type is required' });
 

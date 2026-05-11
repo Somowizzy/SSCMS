@@ -5,8 +5,8 @@ const { authenticate, authorize, logAudit } = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET /api/users - List all users
-router.get('/', authenticate, authorize('hr_admin', 'system_admin'), (req, res) => {
+// GET /api/users - List all users (all authenticated roles can view)
+router.get('/', authenticate, (req, res) => {
   try {
     const db = getDb();
     const users = db.prepare(`

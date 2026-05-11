@@ -3,7 +3,12 @@ window.RequestsComponent = {
     try {
       const data = await window.api.get('/requests');
       const currentUser = window.api.getCurrentUser();
-      
+
+      // Only dept_head, hr_admin, system_admin can take actions
+      const isDeptHead = currentUser && currentUser.role === 'dept_head';
+      const isAdmin    = currentUser && (currentUser.role === 'hr_admin' || currentUser.role === 'system_admin');
+      const canAct     = isDeptHead || isAdmin;
+
       let html = `
         <div class="page-header">
           <div class="page-title">
@@ -11,9 +16,10 @@ window.RequestsComponent = {
             <p>Manage requisitions, transfers, and approvals.</p>
           </div>
           <div class="header-actions">
+            ${canAct ? `
             <button class="btn btn-primary" onclick="window.RequestsComponent.showAddModal()">
               <i class="fas fa-plus"></i> New Request
-            </button>
+            </button>` : ''}
           </div>
         </div>
       `;
@@ -21,7 +27,7 @@ window.RequestsComponent = {
       const requests = data.requests || [];
 
       // Summary cards
-      const pending = requests.filter(r => r.status === 'pending').length;
+      const pending  = requests.filter(r => r.status === 'pending').length;
       const approved = requests.filter(r => r.status === 'approved').length;
       const rejected = requests.filter(r => r.status === 'rejected').length;
 
@@ -36,6 +42,9 @@ window.RequestsComponent = {
           <div class="badge badge-danger" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
             <i class="fas fa-times"></i> Rejected: ${rejected}
           </div>
+          ${!canAct ? `<div class="badge badge-info" style="font-size:0.9rem;padding:0.5rem 1rem;">
+            <i class="fas fa-eye"></i> View-only — only Department Heads can submit or action requests
+          </div>` : ''}
         </div>
       `;
 
@@ -57,7 +66,7 @@ window.RequestsComponent = {
               </thead>
               <tbody>
                 ${requests.length === 0 ? '<tr><td colspan="7" class="text-center text-muted">No requests found</td></tr>' : ''}
-                ${requests.map(req => this.createTableRow(req, currentUser)).join('')}
+                ${requests.map(req => this.createTableRow(req, currentUser, canAct)).join('')}
               </tbody>
             </table>
           </div>
@@ -74,11 +83,6 @@ window.RequestsComponent = {
             <h1>Inter-Department Requests</h1>
             <p>Manage requisitions, transfers, and approvals.</p>
           </div>
-          <div class="header-actions">
-            <button class="btn btn-primary" onclick="window.RequestsComponent.showAddModal()">
-              <i class="fas fa-plus"></i> New Request
-            </button>
-          </div>
         </div>
         <div class="content-card" style="padding: 2rem; text-align: center;">
           <i class="fas fa-exclamation-triangle text-warning" style="font-size: 2rem; margin-bottom: 1rem;"></i>
@@ -92,15 +96,15 @@ window.RequestsComponent = {
     }
   },
 
-  createTableRow(req, user) {
+  createTableRow(req, user, canAct) {
     let statusClass = 'warning';
     let statusLabel = 'Pending';
     let iconClass = 'fa-clock';
-    
-    if (req.status === 'approved') { statusClass = 'success'; statusLabel = 'Approved'; iconClass = 'fa-check'; }
-    if (req.status === 'rejected') { statusClass = 'danger'; statusLabel = 'Rejected'; iconClass = 'fa-times'; }
-    if (req.status === 'in_progress') { statusClass = 'info'; statusLabel = 'In Progress'; iconClass = 'fa-spinner'; }
-    if (req.status === 'completed') { statusClass = 'success'; statusLabel = 'Completed'; iconClass = 'fa-check-double'; }
+
+    if (req.status === 'approved')    { statusClass = 'success'; statusLabel = 'Approved';    iconClass = 'fa-check'; }
+    if (req.status === 'rejected')    { statusClass = 'danger';  statusLabel = 'Rejected';    iconClass = 'fa-times'; }
+    if (req.status === 'in_progress') { statusClass = 'info';    statusLabel = 'In Progress'; iconClass = 'fa-spinner'; }
+    if (req.status === 'completed')   { statusClass = 'success'; statusLabel = 'Completed';   iconClass = 'fa-check-double'; }
 
     const requestType = req.request_type || 'unknown';
     let typeFormatted = requestType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -118,10 +122,11 @@ window.RequestsComponent = {
       </div>`;
     }
 
-    // Determine if user can approve
+    // Only dept_head of target dept OR admin can approve/reject
     const isAdmin = user && (user.role === 'hr_admin' || user.role === 'system_admin');
-    const isTargetDeptHead = user && user.role === 'dept_head' && (req.target_department_id === user.departmentId || (!req.target_department_id && req.department_id === user.departmentId));
-    const canApprove = req.status === 'pending' && (isAdmin || isTargetDeptHead);
+    const isTargetDeptHead = user && user.role === 'dept_head' &&
+      (req.target_department_id === user.departmentId || (!req.target_department_id && req.department_id === user.departmentId));
+    const canApprove = req.status === 'pending' && canAct && (isAdmin || isTargetDeptHead);
 
     return `
       <tr>
@@ -147,11 +152,11 @@ window.RequestsComponent = {
         <td>
           ${canApprove ? `
             <div style="display: flex; gap: 0.5rem;">
-              <button class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" 
+              <button class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;"
                       onclick="window.RequestsComponent.handleAction(${req.id}, 'approved')">
                 Approve
               </button>
-              <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" 
+              <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;"
                       onclick="window.RequestsComponent.handleAction(${req.id}, 'rejected')">
                 Reject
               </button>
@@ -163,11 +168,74 @@ window.RequestsComponent = {
   },
 
   async showAddModal() {
-    let inventory = [];
+    const currentUser = window.api.getCurrentUser();
+    if (!currentUser) return;
+
+    // Load products based on department of the logged-in dept_head
+    let inventory     = [];
+    let shippingItems = [];
+
+    // Determine user's department (id)
+    const deptId = currentUser.departmentId;
+
+    // For shipping dept head (dept id=4): load ALL finished goods including under_review
+    if (deptId === 4 || currentUser.role === 'hr_admin' || currentUser.role === 'system_admin') {
+      try {
+        const res = await window.api.get('/finished-goods');
+        // Shipping dept sees everything: passed, under_review, pending
+        shippingItems = (res.items || []).filter(i => i.quantity > 0);
+      } catch (e) { console.error('Failed to load finished goods'); }
+    }
+
+    // All dept heads can see raw material inventory
     try {
       const res = await window.api.get('/inventory');
       inventory = res.items || [];
     } catch (e) { console.error('Failed to load inventory'); }
+
+    // Build request type options based on department
+    let requestTypeOptions = '';
+    if (deptId === 1 || currentUser.role === 'hr_admin' || currentUser.role === 'system_admin') {
+      // Raw Materials
+      requestTypeOptions += `<option value="material_requisition">Material Requisition (Raw Materials)</option>`;
+      requestTypeOptions += `<option value="stock_adjustment">Stock Adjustment / Correction</option>`;
+    }
+    if (deptId === 2 || currentUser.role === 'hr_admin' || currentUser.role === 'system_admin') {
+      // Production
+      requestTypeOptions += `<option value="production_run">Production Run Request</option>`;
+      requestTypeOptions += `<option value="transfer_to_fg">Transfer to Finished Goods</option>`;
+    }
+    if (deptId === 3 || currentUser.role === 'hr_admin' || currentUser.role === 'system_admin') {
+      // Finished Goods
+      requestTypeOptions += `<option value="transfer_to_fg">Transfer to Finished Goods</option>`;
+      requestTypeOptions += `<option value="stock_adjustment">Stock Adjustment / Correction</option>`;
+    }
+    if (deptId === 4 || currentUser.role === 'hr_admin' || currentUser.role === 'system_admin') {
+      // Shipping
+      requestTypeOptions += `<option value="shipping_request">Shipping Request</option>`;
+    }
+    // Admin/HR can do everything
+    if (currentUser.role === 'hr_admin' || currentUser.role === 'system_admin') {
+      requestTypeOptions += `<option value="material_requisition">Material Requisition (Raw Materials)</option>`;
+      requestTypeOptions += `<option value="stock_adjustment">Stock Adjustment / Correction</option>`;
+      requestTypeOptions += `<option value="production_run">Production Run Request</option>`;
+      requestTypeOptions += `<option value="transfer_to_fg">Transfer to Finished Goods</option>`;
+    }
+    // Deduplicate options (use Set on values)
+    requestTypeOptions = this._deduplicateOptions(requestTypeOptions);
+
+    const productOptionsInv = inventory.map(i =>
+      `<option value="${i.product_id}">${i.name} (${i.quantity_on_hand} ${i.unit} avail)</option>`
+    ).join('');
+
+    // Shipping items includes all statuses
+    const productOptionsShip = shippingItems.map(i =>
+      `<option value="${i.id}" data-name="${i.product_name}" data-max="${i.quantity}" data-status="${i.quality_status}">
+        ${i.product_name} (${i.quantity.toLocaleString()} avail) ${i.quality_status !== 'passed' ? '⚠ ' + i.quality_status : ''}
+      </option>`
+    ).join('');
+
+    const isShipping = (deptId === 4);
 
     const html = `
       <div class="modal-header">
@@ -179,14 +247,10 @@ window.RequestsComponent = {
           <div class="form-group">
             <label>Request Type*</label>
             <select id="req-type" required onchange="window.RequestsComponent.toggleReqFields(this.value)">
-              <option value="material_requisition">Material Requisition (Raw Materials)</option>
-              <option value="transfer_to_fg">Transfer to Finished Goods</option>
-              <option value="shipping_request">Shipping Request</option>
-              <option value="stock_adjustment">Stock Adjustment / Correction</option>
-              <option value="production_run">Production Run Request</option>
+              ${requestTypeOptions || '<option value="material_requisition">Material Requisition</option>'}
             </select>
           </div>
-          
+
           <div class="grid-2">
             <div class="form-group" id="target-dept-group">
               <label>Target Department</label>
@@ -195,7 +259,7 @@ window.RequestsComponent = {
                 <option value="2">Production</option>
                 <option value="3">Finished Goods</option>
                 <option value="4">Shipping</option>
-                <option value="5">HR & Admin</option>
+                <option value="5">HR &amp; Admin</option>
               </select>
             </div>
             <div class="form-group">
@@ -208,13 +272,24 @@ window.RequestsComponent = {
               </select>
             </div>
           </div>
-          
+
+          ${isShipping ? `
+          <div class="form-group" id="shipping-product-group">
+            <label>Finished Good / Product for Shipment
+              <small style="color:var(--text-muted);font-weight:400;">(includes items under review)</small>
+            </label>
+            <select id="req-shipping-product">
+              <option value="">-- Select Finished Good --</option>
+              ${productOptionsShip}
+            </select>
+          </div>` : ''}
+
           <div class="grid-2" id="product-fields">
             <div class="form-group">
               <label>Product / Material</label>
               <select id="req-product">
                 <option value="">-- Select Product --</option>
-                ${inventory.map(i => `<option value="${i.product_id}">${i.name} (${i.quantity_on_hand} ${i.unit} avail)</option>`).join('')}
+                ${productOptionsInv}
               </select>
             </div>
             <div class="form-group">
@@ -222,12 +297,12 @@ window.RequestsComponent = {
               <input type="number" id="req-qty" min="1">
             </div>
           </div>
-          
+
           <div class="form-group">
             <label>Notes / Justification*</label>
             <textarea id="req-notes" rows="3" required placeholder="Provide reason for this request..."></textarea>
           </div>
-          
+
           <div class="modal-footer" style="padding: 1.5rem 0 0 0;">
             <button type="button" class="btn btn-secondary" onclick="window.closeModal()">Cancel</button>
             <button type="submit" class="btn btn-primary" id="btn-submit-req">Submit Request</button>
@@ -236,20 +311,40 @@ window.RequestsComponent = {
       </div>
     `;
     window.openModal(html);
+
+    // Apply initial field toggle
+    const typeEl = document.getElementById('req-type');
+    if (typeEl) this.toggleReqFields(typeEl.value);
+  },
+
+  /** Remove duplicate <option> values from an HTML string */
+  _deduplicateOptions(html) {
+    const seen = new Set();
+    return html.replace(/<option value="([^"]*)"[^>]*>[^<]*<\/option>/g, (match, val) => {
+      if (seen.has(val)) return '';
+      seen.add(val);
+      return match;
+    });
   },
 
   toggleReqFields(type) {
-    const prodFields = document.getElementById('product-fields');
-    const targetDept = document.getElementById('req-target-dept');
-    
+    const prodFields  = document.getElementById('product-fields');
+    const targetDept  = document.getElementById('req-target-dept');
+    const shipGroup   = document.getElementById('shipping-product-group');
+
+    if (shipGroup) shipGroup.style.display = 'none';
+
     if (type === 'material_requisition' || type === 'stock_adjustment') {
-      prodFields.style.display = 'grid';
-      if (type === 'material_requisition') targetDept.value = "1"; // Default to Raw Materials
+      if (prodFields) prodFields.style.display = 'grid';
+      if (type === 'material_requisition' && targetDept) targetDept.value = '1';
+    } else if (type === 'shipping_request') {
+      if (prodFields) prodFields.style.display = 'none';
+      if (targetDept) targetDept.value = '4';
+      if (shipGroup) shipGroup.style.display = 'block';
     } else {
-      prodFields.style.display = 'none';
-      if (type === 'transfer_to_fg') targetDept.value = "3";
-      if (type === 'shipping_request') targetDept.value = "4";
-      if (type === 'production_run') targetDept.value = "2";
+      if (prodFields) prodFields.style.display = 'none';
+      if (type === 'transfer_to_fg'  && targetDept) targetDept.value = '3';
+      if (type === 'production_run'  && targetDept) targetDept.value = '2';
     }
   },
 
@@ -269,7 +364,11 @@ window.RequestsComponent = {
 
     if (type === 'material_requisition' || type === 'stock_adjustment') {
       data.productId = document.getElementById('req-product').value || null;
-      data.quantity = parseInt(document.getElementById('req-qty').value || 0);
+      data.quantity  = parseInt(document.getElementById('req-qty').value || 0);
+    } else if (type === 'shipping_request') {
+      const shipProd = document.getElementById('req-shipping-product');
+      data.productId = shipProd ? (shipProd.value || null) : null;
+      data.quantity  = parseInt(document.getElementById('req-qty')?.value || 0);
     } else {
       data.quantity = parseInt(document.getElementById('req-qty')?.value || 0);
     }
@@ -288,7 +387,7 @@ window.RequestsComponent = {
 
   async handleAction(id, action) {
     if (!confirm(`Are you sure you want to mark this request as ${action}?`)) return;
-    
+
     try {
       await window.api.patch(`/requests/${id}/approve`, { action, comment: '' });
       window.showToast(`Request ${action} successfully`);

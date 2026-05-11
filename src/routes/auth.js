@@ -102,4 +102,37 @@ router.get('/me', authenticate, (req, res) => {
   });
 });
 
+// POST /api/auth/reset-request - Request a password reset (public endpoint)
+router.post('/reset-request', (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const db = getDb();
+    const user = db.prepare('SELECT id, first_name, last_name, email FROM users WHERE email = ? AND is_active = 1').get(email.toLowerCase().trim());
+
+    // Always respond success to prevent email enumeration
+    if (user) {
+      // Notify all HR admins
+      const { createNotification } = require('../middleware/auth');
+      const admins = db.prepare("SELECT id FROM users WHERE role = 'hr_admin' AND is_active = 1").all();
+      admins.forEach(admin => {
+        createNotification(
+          admin.id,
+          'Password Reset Requested',
+          `${user.first_name} ${user.last_name} (${user.email}) has requested a password reset`,
+          'warning',
+          '/users'
+        );
+      });
+      logAudit(user.id, `${user.first_name} ${user.last_name}`, 'Password reset requested', 'auth', `User requested password reset from login page`);
+    }
+
+    res.json({ message: 'If the email exists, HR Admin has been notified' });
+  } catch (err) {
+    console.error('Reset request error:', err);
+    res.status(500).json({ error: 'Failed to process reset request' });
+  }
+});
+
 module.exports = router;
