@@ -25,18 +25,20 @@ const App = {
 };
 
 /* ── Page registry ──────────────────────────────────────── */
+// Arrow wrappers ensure functions are resolved at call time, not at parse time
+// (the render* functions are defined in scripts loaded after this file)
 const Pages = {
-  dashboard:       renderDashboard,
-  inventory:       renderInventory,
-  production:      renderProduction,
-  'finished-goods':renderFinishedGoods,
-  shipping:        renderShipping,
-  requests:        renderRequests,
-  notifications:   renderNotifications,
-  users:           renderUsers,
-  departments:     renderDepartments,
-  reports:         renderReports,
-  audit:           renderAudit,
+  dashboard:       () => renderDashboard(),
+  inventory:       () => renderInventory(),
+  production:      () => renderProduction(),
+  'finished-goods':() => renderFinishedGoods(),
+  shipping:        () => renderShipping(),
+  requests:        () => renderRequests(),
+  notifications:   () => renderNotifications(),
+  users:           () => renderUsers(),
+  departments:     () => renderDepartments(),
+  reports:         () => renderReports(),
+  audit:           () => renderAudit(),
 };
 
 /* ── Boot ───────────────────────────────────────────────── */
@@ -85,7 +87,7 @@ function showApp() {
   setText('#user-role', role);
   setText('#user-avatar', initials(name));
   // admin nav
-  const isAdmin = ['admin','Admin','super_admin'].includes(App.user?.role);
+  const isAdmin = ['hr_admin','system_admin'].includes(App.user?.role);
   $$('.sb-admin').forEach(e => e.style.display = isAdmin ? '' : 'none');
 }
 
