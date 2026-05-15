@@ -1,110 +1,103 @@
-// API Utility for SSCMS
-
-const API_BASE = '/api';
-
-class ApiService {
-  constructor() {
-    this.token = localStorage.getItem('token');
-  }
-
-  setToken(token) {
-    this.token = token;
-    if (token) {
-      localStorage.setItem('token', token);
-    } else {
-      localStorage.removeItem('token');
-    }
-  }
-
-  async request(endpoint, options = {}) {
-    const url = `${API_BASE}${endpoint}`;
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    };
-
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
-
-    const config = {
-      ...options,
-      headers
-    };
-
-    try {
-      const response = await fetch(url, config);
-      
-      if (response.status === 401 && endpoint !== '/auth/login') {
-        // Token expired or invalid
-        this.setToken(null);
-        localStorage.removeItem('user');
-        window.location.hash = '#login';
-        window.location.reload();
-        throw new Error('Authentication required');
-      }
-
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error((data && data.error) || `Request failed with status ${response.status}`);
-      }
-
-      return data;
-    } catch (error) {
-      console.error(`API Error (${endpoint}):`, error);
-      throw error;
-    }
-  }
-
-  get(endpoint) {
-    return this.request(endpoint, { method: 'GET' });
-  }
-
-  post(endpoint, data) {
-    return this.request(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  }
-
-  patch(endpoint, data) {
-    return this.request(endpoint, {
-      method: 'PATCH',
-      body: JSON.stringify(data)
-    });
-  }
-
-  delete(endpoint) {
-    return this.request(endpoint, { method: 'DELETE' });
-  }
-
-  // Specific API calls
-  async login(email, password) {
-    const data = await this.post('/auth/login', { email, password });
-    if (data.token) {
-      this.setToken(data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-    }
+/**
+ * SSCMS API Layer
+ * Wraps all /api/* backend routes with consistent error handling
+ */
+const API = (() => {
+  async function req(method, path, body) {
+    const opts = { method, credentials: 'include', headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(path, opts);
+    if (res.status === 401) { window.dispatchEvent(new Event('sscms:logout')); throw new Error('Unauthorized'); }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
     return data;
   }
+  const get   = (p)      => req('GET',    p);
+  const post  = (p, b)   => req('POST',   p, b);
+  const put   = (p, b)   => req('PUT',    p, b);
+  const patch = (p, b)   => req('PATCH',  p, b);
+  const del   = (p)      => req('DELETE', p);
 
-  async logout() {
-    try {
-      await this.post('/auth/logout');
-    } catch (e) {
-      // Ignore error if already logged out
-    } finally {
-      this.setToken(null);
-      localStorage.removeItem('user');
-    }
-  }
-
-  getCurrentUser() {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
-  }
-}
-
-// Global instance
-window.api = new ApiService();
+  return {
+    auth: {
+      login:  (email, password) => post('/api/auth/login',  { email, password }),
+      logout: ()                => post('/api/auth/logout', {}),
+      me:     ()                => get('/api/auth/me'),
+    },
+    users: {
+      list:   ()          => get('/api/users'),
+      get:    (id)        => get(`/api/users/${id}`),
+      create: (d)         => post('/api/users', d),
+      update: (id, d)     => put(`/api/users/${id}`, d),
+      delete: (id)        => del(`/api/users/${id}`),
+    },
+    departments: {
+      list:   ()          => get('/api/departments'),
+      get:    (id)        => get(`/api/departments/${id}`),
+      create: (d)         => post('/api/departments', d),
+      update: (id, d)     => put(`/api/departments/${id}`, d),
+      delete: (id)        => del(`/api/departments/${id}`),
+    },
+    inventory: {
+      list:     (q = '')  => get(`/api/inventory${q}`),
+      get:      (id)      => get(`/api/inventory/${id}`),
+      create:   (d)       => post('/api/inventory', d),
+      update:   (id, d)   => put(`/api/inventory/${id}`, d),
+      delete:   (id)      => del(`/api/inventory/${id}`),
+      adjust:   (id, d)   => post(`/api/inventory/${id}/adjust`, d),
+    },
+    requests: {
+      list:     (q = '')  => get(`/api/requests${q}`),
+      get:      (id)      => get(`/api/requests/${id}`),
+      create:   (d)       => post('/api/requests', d),
+      update:   (id, d)   => put(`/api/requests/${id}`, d),
+      approve:  (id)      => post(`/api/requests/${id}/approve`, {}),
+      reject:   (id, r)   => post(`/api/requests/${id}/reject`, { reason: r }),
+      complete: (id)      => post(`/api/requests/${id}/complete`, {}),
+      delete:   (id)      => del(`/api/requests/${id}`),
+    },
+    production: {
+      list:     (q = '')  => get(`/api/production${q}`),
+      get:      (id)      => get(`/api/production/${id}`),
+      create:   (d)       => post('/api/production', d),
+      update:   (id, d)   => put(`/api/production/${id}`, d),
+      complete: (id, d)   => post(`/api/production/${id}/complete`, d),
+      delete:   (id)      => del(`/api/production/${id}`),
+    },
+    finishedGoods: {
+      list:     (q = '')  => get(`/api/finished-goods${q}`),
+      get:      (id)      => get(`/api/finished-goods/${id}`),
+      create:   (d)       => post('/api/finished-goods', d),
+      update:   (id, d)   => put(`/api/finished-goods/${id}`, d),
+      delete:   (id)      => del(`/api/finished-goods/${id}`),
+    },
+    shipping: {
+      list:     (q = '')  => get(`/api/shipping${q}`),
+      get:      (id)      => get(`/api/shipping/${id}`),
+      create:   (d)       => post('/api/shipping', d),
+      update:   (id, d)   => put(`/api/shipping/${id}`, d),
+      dispatch: (id)      => post(`/api/shipping/${id}/dispatch`, {}),
+      deliver:  (id)      => post(`/api/shipping/${id}/deliver`, {}),
+      delete:   (id)      => del(`/api/shipping/${id}`),
+    },
+    reports: {
+      dashboard:  ()      => get('/api/reports/dashboard'),
+      inventory:  (q='')  => get(`/api/reports/inventory${q}`),
+      production: (q='')  => get(`/api/reports/production${q}`),
+      shipping:   (q='')  => get(`/api/reports/shipping${q}`),
+      summary:    ()      => get('/api/reports/summary'),
+    },
+    audit: {
+      list: (q = '')      => get(`/api/audit${q}`),
+    },
+    notifications: {
+      list:       ()      => get('/api/notifications'),
+      unread:     ()      => get('/api/notifications/unread'),
+      markRead:   (id)    => patch(`/api/notifications/${id}/read`, {}),
+      markAllRead:()      => patch('/api/notifications/read-all', {}),
+      delete:     (id)    => del(`/api/notifications/${id}`),
+    },
+    // raw methods for edge cases
+    get, post, put, patch, del,
+  };
+})();

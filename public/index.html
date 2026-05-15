@@ -1,142 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Smart Supply Chain Management Software for Preform & Cap Production - Real-time inventory, production tracking, and AI-powered forecasting">
-  <title>SSCMS - Smart Supply Chain Management</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SSCMS — Smart Supply Chain Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+  <link rel="stylesheet" href="/css/styles.css"/>
 </head>
 <body>
-  <div id="app">
-    <!-- Login Screen -->
-    <div id="login-screen" class="login-screen">
-      <div class="login-particles" id="login-particles"></div>
-      <div class="login-container">
-        <div class="login-card">
-          <div class="login-logo">
-            <div class="logo-icon">
-              <i class="fas fa-cubes"></i>
-            </div>
-            <h1>SSCMS</h1>
-            <p class="login-subtitle">Smart Supply Chain Management System</p>
-            <p class="login-company">Preform & Cap Production Company</p>
-          </div>
-          <form id="login-form" autocomplete="off">
-            <div class="form-group">
-              <label for="login-email"><i class="fas fa-envelope"></i> Email Address</label>
-              <input type="email" id="login-email" placeholder="Enter your email" required>
-            </div>
-            <div class="form-group">
-              <label for="login-password"><i class="fas fa-lock"></i> Password</label>
-              <div class="password-wrapper">
-                <input type="password" id="login-password" placeholder="Enter your password" required>
-                <button type="button" class="toggle-password" onclick="togglePassword()">
-                  <i class="fas fa-eye"></i>
-                </button>
-              </div>
-            </div>
-            <div id="login-error" class="login-error" style="display:none;"></div>
-            <button type="submit" class="btn-login" id="login-btn">
-              <span class="btn-text">Sign In</span>
-              <span class="btn-loader" style="display:none;"><i class="fas fa-spinner fa-spin"></i></span>
-            </button>
-          </form>
-          <div class="login-footer">
-            <p><a href="#" class="forgot-password-link" onclick="window.showResetPasswordModal(event)">
-              <i class="fas fa-key"></i> Forgot your password? Click here to reset
-            </a></p>
-          </div>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="login-screen" class="login-screen" style="display:none">
+  <div class="login-left">
+    <div class="login-left-inner">
+      <div class="brand-mark">
+        <div class="brand-icon">SC</div>
+        <div>
+          <div class="brand-name">SSCMS</div>
+          <div class="brand-tag">Smart Supply Chain Management</div>
         </div>
       </div>
-    </div>
-
-    <!-- Main App Layout -->
-    <div id="main-app" class="main-app" style="display:none;">
-      <!-- Sidebar -->
-      <aside id="sidebar" class="sidebar">
-        <div class="sidebar-header">
-          <div class="sidebar-logo">
-            <i class="fas fa-cubes"></i>
-            <span>SSCMS</span>
-          </div>
-          <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">
-            <i class="fas fa-bars"></i>
-          </button>
-        </div>
-        <nav id="sidebar-nav" class="sidebar-nav"></nav>
-        <div class="sidebar-footer">
-          <div class="user-info" id="sidebar-user-info"></div>
-          <button class="btn-logout" onclick="handleLogout()">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>Sign Out</span>
-          </button>
-        </div>
-      </aside>
-
-      <!-- Main Content Area -->
-      <main class="main-content">
-        <!-- Top Bar -->
-        <header class="topbar">
-          <div class="topbar-left">
-            <button class="mobile-menu-btn" onclick="toggleSidebar()">
-              <i class="fas fa-bars"></i>
-            </button>
-            <div class="breadcrumb" id="breadcrumb"></div>
-          </div>
-          <div class="topbar-right">
-            <div class="search-bar">
-              <i class="fas fa-search"></i>
-              <input type="text" placeholder="Search..." id="global-search">
-            </div>
-            <div class="notification-bell" id="notification-bell" onclick="toggleNotifications()">
-              <i class="fas fa-bell"></i>
-              <span class="notification-badge" id="notification-badge" style="display:none;">0</span>
-            </div>
-            <div class="notification-panel" id="notification-panel" style="display:none;">
-              <div class="notification-header">
-                <h3>Notifications</h3>
-                <button onclick="markAllRead()">Mark all read</button>
-              </div>
-              <div class="notification-list" id="notification-list"></div>
-            </div>
-            <div class="user-avatar" id="topbar-user">
-              <div class="avatar-circle" id="avatar-initials"></div>
-            </div>
-          </div>
-        </header>
-
-        <!-- Page Content -->
-        <div class="page-content" id="page-content">
-          <!-- Dynamic content loaded here -->
-        </div>
-      </main>
+      <div class="left-hero">
+        <h2>Command your entire supply chain from one place</h2>
+        <p>Real-time production tracking, AI-powered demand forecasting, and intelligent inventory management — built for Preform &amp; Cap manufacturers.</p>
+      </div>
+      <div class="feature-list">
+        <div class="feat-item"><div class="feat-dot"></div><span>Real-time inventory</span> monitoring across all warehouses</div>
+        <div class="feat-item"><div class="feat-dot"></div><span>Production line tracking</span> with quality control alerts</div>
+        <div class="feat-item"><div class="feat-dot"></div><span>R-PET recycling loop</span> — rejections ground &amp; reused</div>
+        <div class="feat-item"><div class="feat-dot"></div><span>Shipping &amp; dispatch</span> management with live status</div>
+        <div class="feat-item"><div class="feat-dot"></div><span>Role-based access control</span> for every team level</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-num" id="ls-units">—</div><div class="stat-lbl">Inventory items</div></div>
+        <div class="stat-box"><div class="stat-num" id="ls-orders">—</div><div class="stat-lbl">Active orders</div></div>
+        <div class="stat-box"><div class="stat-num" id="ls-runs">—</div><div class="stat-lbl">Production runs</div></div>
+      </div>
     </div>
   </div>
-
-  <!-- Modal Overlay -->
-  <div class="modal-overlay" id="modal-overlay" style="display:none;" onclick="closeModal()">
-    <div class="modal-content" id="modal-content" onclick="event.stopPropagation()"></div>
+  <div class="login-right">
+    <div class="login-form-wrap">
+      <div class="form-head">
+        <h1>Welcome back</h1>
+        <p>Sign in to your dashboard</p>
+      </div>
+      <div class="role-badge"><i class="ti ti-shield-check"></i> Secure access</div>
+      <div id="login-error" class="login-error" style="display:none"></div>
+      <div class="field">
+        <label class="field-label">Email address</label>
+        <div class="field-wrap">
+          <i class="ti ti-mail"></i>
+          <input class="field-input" id="login-email" type="email" placeholder="your@email.com" autocomplete="email"/>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Password</label>
+        <div class="field-wrap">
+          <i class="ti ti-lock"></i>
+          <input class="field-input" id="login-password" type="password" placeholder="Enter your password" autocomplete="current-password"/>
+          <button class="eye-btn" type="button" onclick="togglePass()"><i class="ti ti-eye" id="eye-ico"></i></button>
+        </div>
+      </div>
+      <button class="login-btn" id="login-btn" onclick="doLogin()">
+        <i class="ti ti-login"></i><span>Sign in to dashboard</span>
+      </button>
+      <div class="divider">Default admin credentials</div>
+      <div class="cred-box">
+        <div class="cred-row"><i class="ti ti-at"></i><span>Email:</span><span class="cred-val">admin@sscms.com</span></div>
+        <div class="cred-row"><i class="ti ti-key"></i><span>Password:</span><span class="cred-val">admin123</span></div>
+      </div>
+      <div class="form-footer">SSCMS &copy; 2026 &nbsp;&middot;&nbsp; Preform &amp; Cap Division</div>
+    </div>
   </div>
+</div>
 
-  <!-- Toast Container -->
-  <div class="toast-container" id="toast-container"></div>
+<!-- ═══ APP SHELL ═══ -->
+<div id="app-shell" class="app" style="display:none">
 
-  <!-- Scripts -->
-  <script src="/js/api.js"></script>
-  <script src="/js/components/login.js"></script>
-  <script src="/js/components/sidebar.js"></script>
-  <script src="/js/components/dashboard.js?v=2"></script>
-  <script src="/js/components/inventory.js"></script>
-  <script src="/js/components/production.js"></script>
-  <script src="/js/components/finishedGoods.js"></script>
-  <script src="/js/components/shipping.js"></script>
-  <script src="/js/components/requests.js"></script>
-  <script src="/js/components/users.js"></script>
-  <script src="/js/app.js"></script>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-icon">SC</div>
+      <div><div class="sb-name">SSCMS</div><div class="sb-sub">Supply Chain Suite</div></div>
+    </div>
+    <nav class="sb-nav" id="sidebar-nav">
+      <div class="sb-lbl">Overview</div>
+      <div class="sb-item" data-page="dashboard"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+      <div class="sb-item" data-page="reports"><i class="ti ti-chart-line"></i> Analytics</div>
+
+      <div class="sb-lbl">Production</div>
+      <div class="sb-item" data-page="production"><i class="ti ti-settings-2"></i> Production</div>
+      <div class="sb-item" data-page="requests"><i class="ti ti-clipboard-list"></i> Orders &amp; Requests <span class="sb-badge" id="badge-requests"></span></div>
+      <div class="sb-item" data-page="finished-goods"><i class="ti ti-package"></i> Finished Goods</div>
+
+      <div class="sb-lbl">Inventory</div>
+      <div class="sb-item" data-page="inventory"><i class="ti ti-box"></i> Stock &amp; Inventory</div>
+      <div class="sb-item" data-page="shipping"><i class="ti ti-truck"></i> Shipping</div>
+
+      <div class="sb-lbl">Intelligence</div>
+      <div class="sb-item" data-page="notifications"><i class="ti ti-bell"></i> Alerts <span class="sb-badge" id="badge-notif"></span></div>
+
+      <div class="sb-lbl sb-admin" style="display:none">Admin</div>
+      <div class="sb-item sb-admin" data-page="users" style="display:none"><i class="ti ti-users"></i> Users</div>
+      <div class="sb-item sb-admin" data-page="departments" style="display:none"><i class="ti ti-building"></i> Departments</div>
+      <div class="sb-item" data-page="audit"><i class="ti ti-file-search"></i> Audit Log</div>
+    </nav>
+    <div class="sb-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name" id="user-name">Loading...</div>
+          <div class="user-role" id="user-role">—</div>
+        </div>
+        <div style="color:var(--txt2);font-size:16px;cursor:pointer;flex-shrink:0" onclick="doLogout()" title="Sign out"><i class="ti ti-logout"></i></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div style="flex:1;display:flex;align-items:center;gap:6px;min-width:0">
+        <span class="tb-crumb">SSCMS</span>
+        <i class="ti ti-chevron-right" style="font-size:12px;color:var(--txt3)"></i>
+        <div class="page-title" id="page-title">Dashboard</div>
+      </div>
+      <div class="search-box" id="search-box">
+        <i class="ti ti-search"></i>
+        <input type="text" id="search-input" placeholder="Search..." style="background:none;border:none;outline:none;font-size:12px;color:var(--txt);font-family:inherit;width:100%" autocomplete="off"/>
+      </div>
+      <div class="icon-btn" onclick="goTo('notifications')" title="Alerts">
+        <i class="ti ti-bell"></i>
+        <div class="notif-pip" id="notif-pip" style="display:none"></div>
+      </div>
+      <div class="icon-btn" onclick="refreshPage()" title="Refresh">
+        <i class="ti ti-refresh" id="refresh-icon"></i>
+      </div>
+      <button class="primary-btn" id="cta-btn" onclick="pageCTA()">
+        <i class="ti ti-plus" id="cta-icon"></i>
+        <span id="cta-label">New</span>
+      </button>
+    </div>
+    <div class="content" id="page-content">
+      <div class="loading-state"><div class="loading-spinner"></div><span>Loading...</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" class="modal-overlay" style="display:none" onclick="closeModal(event)">
+  <div class="modal-box" id="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-hd">
+      <div class="modal-title" id="modal-title">—</div>
+      <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- SCRIPTS — order matters -->
+<script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/login.js"></script>
+<script src="/js/dashboard.js"></script>
+<script src="/js/inventory.js"></script>
+<script src="/js/production.js"></script>
+<script src="/js/requests.js"></script>
+<script src="/js/finishedGoods.js"></script>
+<script src="/js/shipping.js"></script>
+<script src="/js/notifications.js"></script>
+<script src="/js/users.js"></script>
+<script src="/js/departments.js"></script>
+<script src="/js/reports.js"></script>
+<script src="/js/audit.js"></script>
 </body>
 </html>

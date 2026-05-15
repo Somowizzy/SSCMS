@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const compression = require('compression');
 const path = require('path');
 const { initDatabase } = require('./src/db/database');
 const { seedDatabase } = require('./src/db/seed');
@@ -21,13 +22,27 @@ const notificationRoutes = require('./src/routes/notifications');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// Gzip all responses
+app.use(compression());
+
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// Serve static files from public directory
-app.use(express.static(path.join(__dirname, 'public')));
+// Static assets (CSS/JS) — long cache, let browser reuse them
+app.use('/css', express.static(path.join(__dirname, 'public', 'css'), { maxAge: '7d' }));
+app.use('/js',  express.static(path.join(__dirname, 'public', 'js'),  { maxAge: '7d' }));
+
+// index.html — no cache so users always get the latest version
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: 0, etag: true }));
 
 // API Routes
 app.use('/api/auth', authRoutes);
