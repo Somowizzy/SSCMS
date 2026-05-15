@@ -20,6 +20,28 @@ router.get('/', authenticate, (req, res) => {
   }
 });
 
+// GET /api/notifications/unread - unread count (must be before /:id routes)
+router.get('/unread', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const row = db.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').get(req.user.id);
+    res.json({ count: row.count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/notifications/:id
+router.delete('/:id', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    db.prepare('DELETE FROM notifications WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PATCH /api/notifications/:id/read
 router.patch('/:id/read', authenticate, (req, res) => {
   try {

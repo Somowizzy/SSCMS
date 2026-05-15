@@ -104,6 +104,74 @@ router.get('/dashboard', authenticate, (req, res) => {
   }
 });
 
+// GET /api/reports/summary - lightweight stats for login screen
+router.get('/summary', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const inventoryCount  = db.prepare('SELECT COUNT(*) as c FROM inventory').get().c;
+    const pendingRequests = db.prepare("SELECT COUNT(*) as c FROM requests WHERE status = 'pending'").get().c;
+    const activeRuns      = db.prepare("SELECT COUNT(*) as c FROM production_jobs WHERE status IN ('in_progress','scheduled')").get().c;
+    res.json({ inventoryCount, pendingRequests, activeRuns });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/reports/inventory - inventory analytics
+router.get('/inventory', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const stats = db.prepare(`
+      SELECT
+        COUNT(*) as totalItems,
+        SUM(CASE WHEN i.quantity_on_hand <= 0 THEN 1 ELSE 0 END) as criticalItems,
+        SUM(CASE WHEN i.quantity_on_hand > 0 AND i.quantity_on_hand <= p.reorder_level THEN 1 ELSE 0 END) as lowStockItems,
+        SUM(CASE WHEN p.category = 'r_pet' OR p.name LIKE '%R-PET%' OR p.name LIKE '%RPET%' THEN i.quantity_on_hand ELSE 0 END) as rpetAvailable
+      FROM inventory i JOIN products p ON i.product_id = p.id
+    `).get();
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/reports/production - production analytics
+router.get('/production', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const stats = db.prepare(`
+      SELECT
+        COUNT(*) as totalRuns,
+        SUM(CASE WHEN status IN ('in_progress','scheduled') THEN 1 ELSE 0 END) as activeRuns,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completedRuns,
+        SUM(defects) as totalRejected,
+        SUM(defects * 0.95) as rpetTotal
+      FROM production_jobs
+    `).get();
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/reports/shipping - shipping analytics
+router.get('/shipping', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const stats = db.prepare(`
+      SELECT
+        COUNT(*) as totalShipments,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pendingShipments,
+        SUM(CASE WHEN status = 'in_transit' THEN 1 ELSE 0 END) as dispatchedShipments,
+        SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) as deliveredShipments
+      FROM shipments
+    `).get();
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/reports/stock-levels
 router.get('/stock-levels', authenticate, (req, res) => {
   try {
