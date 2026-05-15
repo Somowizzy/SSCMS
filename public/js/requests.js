@@ -101,10 +101,10 @@ async function openAddRequest() {
         <div class="form-group"><label class="form-label">Request type *</label>
           <select id="r-type" class="form-select">
             <option value="material_requisition">Material Requisition</option>
-            <option value="production_order">Production Order</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="transfer">Transfer</option>
-            <option value="other">Other</option>
+            <option value="production_run">Production Run</option>
+            <option value="transfer_to_fg">Transfer to Finished Goods</option>
+            <option value="shipping_request">Shipping Request</option>
+            <option value="stock_adjustment">Stock Adjustment</option>
           </select>
         </div>
         <div class="form-group"><label class="form-label">Priority</label>
