@@ -356,5 +356,4 @@ function alertColor(type) {
   return 'var(--txt2)';
 }
 
-/* ── fmtDT alias ── */
-function fmtDT(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? s : d.toLocaleString('en-NG',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }
+// fmtDT is defined in utils.js

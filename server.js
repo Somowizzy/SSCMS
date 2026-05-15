@@ -37,11 +37,9 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// Static assets (CSS/JS) — long cache, let browser reuse them
-app.use('/css', express.static(path.join(__dirname, 'public', 'css'), { maxAge: '7d' }));
-app.use('/js',  express.static(path.join(__dirname, 'public', 'js'),  { maxAge: '7d' }));
-
-// index.html — no cache so users always get the latest version
+// Serve all public assets with ETag revalidation — browsers check freshness
+// on every request but get a fast 304 when unchanged. Avoids stale JS/CSS
+// being served from a long-lived cache after a deploy.
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: 0, etag: true }));
 
 // API Routes
