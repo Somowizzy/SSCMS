@@ -20,6 +20,34 @@ router.get('/', authenticate, (req, res) => {
   }
 });
 
+// POST /api/departments - Create department
+router.post('/', authenticate, authorize('hr_admin', 'system_admin'), (req, res) => {
+  try {
+    const { name, description } = req.body;
+    if (!name) return res.status(400).json({ error: 'Department name is required' });
+    const db = getDb();
+    const result = db.prepare(
+      'INSERT INTO departments (name, description) VALUES (?, ?)'
+    ).run(name, description || '');
+    logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Department created', 'departments', `Created department: ${name}`);
+    res.status(201).json({ id: result.lastInsertRowid, message: 'Department created' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/departments/:id
+router.delete('/:id', authenticate, authorize('hr_admin', 'system_admin'), (req, res) => {
+  try {
+    const db = getDb();
+    db.prepare('DELETE FROM departments WHERE id = ?').run(req.params.id);
+    logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Department deleted', 'departments', `Deleted department #${req.params.id}`);
+    res.json({ message: 'Department deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PATCH /api/departments/:id - Update department (assign head)
 router.patch('/:id', authenticate, authorize('hr_admin', 'system_admin'), (req, res) => {
   try {

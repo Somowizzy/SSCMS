@@ -146,6 +146,29 @@ function refreshPage() {
   setTimeout(() => icon?.classList.remove('spin'), 800);
 }
 
+/* ── Theme toggle ───────────────────────────────────────── */
+function toggleTheme() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const next = isLight ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next === 'light' ? 'light' : '');
+  const icon = $('#theme-icon');
+  if (icon) icon.className = next === 'light' ? 'ti ti-moon' : 'ti ti-sun';
+  try { localStorage.setItem('sscms-theme', next); } catch {}
+}
+
+(function initTheme() {
+  try {
+    const saved = localStorage.getItem('sscms-theme');
+    if (saved === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.addEventListener('DOMContentLoaded', () => {
+        const icon = $('#theme-icon');
+        if (icon) icon.className = 'ti ti-moon';
+      });
+    }
+  } catch {}
+})();
+
 /* ── Badges ─────────────────────────────────────────────── */
 async function refreshBadges() {
   try {

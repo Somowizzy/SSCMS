@@ -66,11 +66,6 @@
       <button class="login-btn" id="login-btn" onclick="doLogin()">
         <i class="ti ti-login"></i><span>Sign in to dashboard</span>
       </button>
-      <div class="divider">Default admin credentials</div>
-      <div class="cred-box">
-        <div class="cred-row"><i class="ti ti-at"></i><span>Email:</span><span class="cred-val">admin@sscms.com</span></div>
-        <div class="cred-row"><i class="ti ti-key"></i><span>Password:</span><span class="cred-val">admin123</span></div>
-      </div>
       <div class="form-footer">SSCMS &copy; 2026 &nbsp;&middot;&nbsp; Preform &amp; Cap Division</div>
     </div>
   </div>
@@ -130,6 +125,9 @@
       <div class="search-box" id="search-box">
         <i class="ti ti-search"></i>
         <input type="text" id="search-input" placeholder="Search..." style="background:none;border:none;outline:none;font-size:12px;color:var(--txt);font-family:inherit;width:100%" autocomplete="off"/>
+      </div>
+      <div class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">
+        <i class="ti ti-sun" id="theme-icon"></i>
       </div>
       <div class="icon-btn" onclick="goTo('notifications')" title="Alerts">
         <i class="ti ti-bell"></i>

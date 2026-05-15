@@ -106,23 +106,35 @@ function buildUsersPage(users) {
   `);
 }
 
-function openAddUser() {
+async function openAddUser() {
+  let depts = [];
+  try { const r = await API.departments.list(); depts = Array.isArray(r) ? r : (r.departments || []); } catch {}
   openModal('Invite user', `
     <div class="form-section">
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Full name *</label><input id="u-name" class="form-input" placeholder="John Doe"/></div>
-        <div class="form-group"><label class="form-label">Email *</label><input id="u-email" class="form-input" type="email" placeholder="john@company.com"/></div>
+        <div class="form-group"><label class="form-label">First name *</label><input id="u-fname" class="form-input" placeholder="John"/></div>
+        <div class="form-group"><label class="form-label">Last name *</label><input id="u-lname" class="form-input" placeholder="Doe"/></div>
       </div>
       <div class="form-row">
+        <div class="form-group"><label class="form-label">Email *</label><input id="u-email" class="form-input" type="email" placeholder="john@company.com"/></div>
         <div class="form-group"><label class="form-label">Password *</label><input id="u-pass" class="form-input" type="password" placeholder="Min 6 characters"/></div>
-        <div class="form-group"><label class="form-label">Role</label>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Role *</label>
           <select id="u-role" class="form-select">
-            <option value="user">User</option><option value="manager">Manager</option>
-            <option value="operator">Operator</option><option value="qc">QC Inspector</option><option value="admin">Administrator</option>
+            <option value="dept_user">Department User</option>
+            <option value="dept_head">Department Head</option>
+            <option value="hr_admin">HR Admin</option>
+            <option value="system_admin">System Admin</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Department</label>
+          <select id="u-dept-id" class="form-select">
+            <option value="">— None —</option>
+            ${depts.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join('')}
           </select>
         </div>
       </div>
-      <div class="form-group"><label class="form-label">Department</label><input id="u-dept" class="form-input" placeholder="e.g. Production, Raw Materials"/></div>
       <div class="form-actions">
         <button class="sec-btn" onclick="forceCloseModal()">Cancel</button>
         <button class="primary-btn" onclick="submitAddUser()"><i class="ti ti-user-plus"></i> Create user</button>
@@ -132,12 +144,15 @@ function openAddUser() {
 }
 
 async function submitAddUser() {
-  const name  = $('#u-name')?.value.trim();
-  const email = $('#u-email')?.value.trim();
-  const pass  = $('#u-pass')?.value;
-  if (!name||!email||!pass) { toast('Name, email and password are required', 'error'); return; }
+  const firstName = $('#u-fname')?.value.trim();
+  const lastName  = $('#u-lname')?.value.trim();
+  const email     = $('#u-email')?.value.trim();
+  const pass      = $('#u-pass')?.value;
+  const role      = $('#u-role')?.value;
+  const deptId    = $('#u-dept-id')?.value;
+  if (!firstName||!lastName||!email||!pass||!role) { toast('All fields marked * are required', 'error'); return; }
   try {
-    await API.users.create({ name, email, password: pass, role: $('#u-role')?.value, department: $('#u-dept')?.value.trim() });
+    await API.users.create({ firstName, lastName, email, password: pass, role, departmentId: deptId || null });
     forceCloseModal(); toast('User created'); renderUsers();
   } catch (err) { toast(err.message, 'error'); }
 }
@@ -181,11 +196,14 @@ function deleteUser(id, name) {
 /* ══════════════════════════════════════════
    departments.js
    ══════════════════════════════════════════ */
+let _deptsAll = [];
+
 async function renderDepartments() {
   setHTML('#page-content', loading());
   try {
     const res  = await API.departments.list();
-    const depts = Array.isArray(res) ? res : (res.departments || res.data || []);
+    _deptsAll = Array.isArray(res) ? res : (res.departments || res.data || []);
+    const depts = _deptsAll;
     setHTML('#page-content', `
       <div class="card">
         <div class="card-hd">
@@ -234,7 +252,26 @@ async function submitAddDept() {
   catch (err) { toast(err.message, 'error'); }
 }
 
-function openEditDept(id) {} // similar pattern — left brief for space
+function openEditDept(id) {
+  const d = _deptsAll ? _deptsAll.find(x => x.id === id) : null;
+  openModal('Edit department', `
+    <div class="form-section">
+      <div class="form-group"><label class="form-label">Name *</label><input id="de-name" class="form-input" value="${esc(d?.name||'')}"/></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea id="de-desc" class="form-textarea" rows="2">${esc(d?.description||'')}</textarea></div>
+      <div class="form-actions">
+        <button class="sec-btn" onclick="forceCloseModal()">Cancel</button>
+        <button class="primary-btn" onclick="submitEditDept(${id})"><i class="ti ti-check"></i> Save</button>
+      </div>
+    </div>
+  `);
+}
+
+async function submitEditDept(id) {
+  const name = $('#de-name')?.value.trim();
+  if (!name) { toast('Name required', 'error'); return; }
+  try { await API.departments.update(id, { name, description: $('#de-desc')?.value.trim() }); forceCloseModal(); toast('Department updated'); renderDepartments(); }
+  catch (err) { toast(err.message, 'error'); }
+}
 
 function deleteDept(id, name) {
   confirm(`Delete department <strong>${esc(name)}</strong>?`, async () => {

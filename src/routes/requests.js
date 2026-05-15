@@ -177,4 +177,49 @@ router.patch('/:id/approve', authenticate, (req, res) => {
   }
 });
 
+// PATCH /api/requests/:id/reject
+router.patch('/:id/reject', authenticate, (req, res) => {
+  try {
+    const { reason } = req.body;
+    const db = getDb();
+    const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+    if (!request) return res.status(404).json({ error: 'Request not found' });
+    db.prepare('INSERT INTO approvals (request_id, approver_id, action, comment) VALUES (?, ?, ?, ?)')
+      .run(req.params.id, req.user.id, 'rejected', reason || '');
+    db.prepare("UPDATE requests SET status = 'rejected', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(req.params.id);
+    createNotification(request.requester_id, 'Request Rejected',
+      `Your request was rejected by ${req.user.first_name} ${req.user.last_name}${reason ? ': ' + reason : ''}`, 'error', '/requests');
+    logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Request rejected', 'requests', `Rejected request #${req.params.id}`);
+    res.json({ message: 'Request rejected' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/requests/:id/complete
+router.post('/:id/complete', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+    if (!request) return res.status(404).json({ error: 'Request not found' });
+    db.prepare("UPDATE requests SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(req.params.id);
+    logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Request completed', 'requests', `Completed request #${req.params.id}`);
+    res.json({ message: 'Request marked as completed' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/requests/:id
+router.delete('/:id', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    db.prepare('DELETE FROM requests WHERE id = ?').run(req.params.id);
+    logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Request deleted', 'requests', `Deleted request #${req.params.id}`);
+    res.json({ message: 'Request deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

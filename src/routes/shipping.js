@@ -114,4 +114,47 @@ router.patch('/:id', authenticate, (req, res) => {
   }
 });
 
+// POST /api/shipping/:id/dispatch
+router.post('/:id/dispatch', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const s = db.prepare('SELECT * FROM shipments WHERE id = ?').get(req.params.id);
+    if (!s) return res.status(404).json({ error: 'Shipment not found' });
+    db.prepare("UPDATE shipments SET status = 'in_transit', actual_pickup = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(req.params.id);
+    logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Shipment dispatched', 'shipping', `Dispatched shipment ${s.manifest_no}`);
+    res.json({ message: 'Shipment dispatched' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/shipping/:id/deliver
+router.post('/:id/deliver', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const s = db.prepare('SELECT * FROM shipments WHERE id = ?').get(req.params.id);
+    if (!s) return res.status(404).json({ error: 'Shipment not found' });
+    db.prepare("UPDATE shipments SET status = 'delivered', delivery_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(req.params.id);
+    logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Shipment delivered', 'shipping', `Delivered shipment ${s.manifest_no}`);
+    res.json({ message: 'Shipment marked as delivered' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/shipping/:id
+router.delete('/:id', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const s = db.prepare('SELECT * FROM shipments WHERE id = ?').get(req.params.id);
+    if (!s) return res.status(404).json({ error: 'Shipment not found' });
+    db.prepare('DELETE FROM shipment_items WHERE shipment_id = ?').run(req.params.id);
+    db.prepare('DELETE FROM shipments WHERE id = ?').run(req.params.id);
+    logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Shipment deleted', 'shipping', `Deleted shipment ${s.manifest_no}`);
+    res.json({ message: 'Shipment deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

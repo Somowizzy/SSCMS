@@ -58,27 +58,27 @@ function filterReqs() {
 
 function renderReqTable(items) {
   if (!items.length) { setHTML('#req-table', empty('No requests found', 'ti-clipboard-list')); return; }
-  const isAdmin = ['admin','Admin'].includes(App.user?.role);
+  const canApprove = ['hr_admin','system_admin','dept_head'].includes(App.user?.role);
   setHTML('#req-table', `
     <div class="tbl-wrap"><table class="data-table">
       <thead><tr>
-        <th style="width:70px">ID</th><th>Description / Type</th><th>Requested by</th>
-        <th style="width:110px">Status</th><th style="width:80px">Date</th><th style="width:120px">Actions</th>
+        <th style="width:70px">ID</th><th>Type / Notes</th><th>Requested by</th>
+        <th style="width:110px">Status</th><th style="width:80px">Date</th><th style="width:130px">Actions</th>
       </tr></thead>
       <tbody>
         ${items.map(r => `
           <tr>
             <td class="mono">#${esc(r.id)}</td>
             <td>
-              <div style="font-weight:600">${esc(r.description||r.name||r.title||'—')}</div>
-              <div style="font-size:10.5px;color:var(--txt2)">${esc(r.type||'')} ${r.quantity?'· '+fmt(r.quantity)+' '+(r.unit||''):''}</div>
+              <div style="font-weight:600">${esc((r.request_type||r.type||'').replace(/_/g,' '))}</div>
+              <div style="font-size:10.5px;color:var(--txt2)">${esc(r.notes||r.description||'')} ${r.quantity?'· '+fmt(r.quantity)+' '+(r.product_unit||''):''}</div>
             </td>
-            <td style="color:var(--txt2)">${esc(r.requested_by||r.requestedBy||r.user||'—')}</td>
+            <td style="color:var(--txt2)">${esc(r.requester_name||r.requested_by||'—')}</td>
             <td>${pill(r.status)}</td>
             ${tdDate(r.created_at||r.createdAt)}
             <td>
               <div style="display:flex;gap:4px">
-                ${isAdmin && (r.status||'').toLowerCase() === 'pending' ? `
+                ${canApprove && (r.status||'').toLowerCase() === 'pending' ? `
                   <button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:var(--green)" onclick="approveReq(${r.id})" title="Approve"><i class="ti ti-check"></i></button>
                   <button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:#f87171" onclick="rejectReq(${r.id})" title="Reject"><i class="ti ti-x"></i></button>` : ''}
                 ${(r.status||'').toLowerCase() === 'approved' ? `<button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:var(--blue2)" onclick="completeReq(${r.id})" title="Mark complete"><i class="ti ti-check-all"></i></button>` : ''}
@@ -91,33 +91,66 @@ function renderReqTable(items) {
   `);
 }
 
-function openAddRequest() {
+async function openAddRequest() {
+  let depts = [], prods = [];
+  try { const r = await API.departments.list(); depts = Array.isArray(r) ? r : (r.departments||[]); } catch {}
+  try { const r = await API.inventory.list(); prods = Array.isArray(r) ? r : (r.items||[]); } catch {}
   openModal('New request', `
     <div class="form-section">
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Request type</label>
+        <div class="form-group"><label class="form-label">Request type *</label>
           <select id="r-type" class="form-select">
-            <option value="material">Raw material</option><option value="rpet">R-PET</option>
-            <option value="production">Production order</option><option value="maintenance">Maintenance</option><option value="other">Other</option>
+            <option value="material_requisition">Material Requisition</option>
+            <option value="production_order">Production Order</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="transfer">Transfer</option>
+            <option value="other">Other</option>
           </select>
         </div>
+        <div class="form-group"><label class="form-label">Priority</label>
+          <select id="r-priority" class="form-select">
+            <option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option><option value="low">Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Target department</label>
+          <select id="r-dept" class="form-select">
+            <option value="">— None —</option>
+            ${depts.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Material/Product</label>
+          <select id="r-prod" class="form-select">
+            <option value="">— None —</option>
+            ${prods.map(p => `<option value="${p.product_id||p.id}">${esc(p.name)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label class="form-label">Quantity</label><input id="r-qty" class="form-input" type="number" min="0" placeholder="0"/></div>
       </div>
-      <div class="form-group"><label class="form-label">Description *</label><input id="r-desc" class="form-input" placeholder="What are you requesting?"/></div>
-      <div class="form-group"><label class="form-label">Notes</label><textarea id="r-notes" class="form-textarea" rows="2"></textarea></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea id="r-notes" class="form-textarea" rows="2" placeholder="Additional details..."></textarea></div>
       <div class="form-actions">
         <button class="sec-btn" onclick="forceCloseModal()">Cancel</button>
-        <button class="primary-btn" onclick="submitAddReq()"><i class="ti ti-send"></i> Submit</button>
+        <button class="primary-btn" onclick="submitAddReq()"><i class="ti ti-send"></i> Submit request</button>
       </div>
     </div>
   `);
 }
 
 async function submitAddReq() {
-  const desc = $('#r-desc')?.value.trim();
-  if (!desc) { toast('Description required', 'error'); return; }
+  const requestType = $('#r-type')?.value;
+  if (!requestType) { toast('Request type is required', 'error'); return; }
   try {
-    await API.requests.create({ type: $('#r-type')?.value, description: desc, quantity: Number($('#r-qty')?.value)||null, notes: $('#r-notes')?.value.trim() });
+    await API.requests.create({
+      requestType,
+      targetDepartmentId: $('#r-dept')?.value || null,
+      productId: $('#r-prod')?.value || null,
+      quantity: Number($('#r-qty')?.value) || 0,
+      priority: $('#r-priority')?.value || 'normal',
+      notes: $('#r-notes')?.value.trim()
+    });
     forceCloseModal(); toast('Request submitted'); renderRequests(); refreshBadges();
   } catch (err) { toast(err.message, 'error'); }
 }

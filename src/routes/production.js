@@ -129,6 +129,40 @@ router.patch('/:id', authenticate, (req, res) => {
   }
 });
 
+// POST /api/production/:id/complete
+router.post('/:id/complete', authenticate, (req, res) => {
+  try {
+    const { quantityCompleted, defects } = req.body;
+    const db = getDb();
+    const job = db.prepare('SELECT * FROM production_jobs WHERE id = ?').get(req.params.id);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    const finalQty     = quantityCompleted !== undefined ? quantityCompleted : job.quantity_completed;
+    const finalDefects = defects !== undefined ? defects : job.defects;
+    const goodQty      = Math.max(0, finalQty - finalDefects);
+
+    db.prepare(`UPDATE production_jobs SET status = 'completed', quantity_completed = ?, defects = ?,
+      end_time = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+      .run(finalQty, finalDefects, req.params.id);
+
+    db.prepare(`INSERT INTO finished_goods (product_name, production_job_id, quantity, batch_no, quality_status)
+      VALUES (?, ?, ?, ?, 'pending')`)
+      .run(job.product_name, job.id, goodQty, `FG-${Date.now()}`);
+
+    const fgDept = db.prepare('SELECT head_user_id FROM departments WHERE id = 3').get();
+    if (fgDept && fgDept.head_user_id) {
+      createNotification(fgDept.head_user_id, 'Production Completed',
+        `${job.product_name}: ${goodQty} units ready for QC`, 'success', '/finished-goods');
+    }
+
+    logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Production job completed', 'production',
+      `Completed job #${job.id} (${job.product_name}): ${goodQty} good units`);
+    res.json({ message: 'Job completed', finishedGoodsCreated: goodQty });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // DELETE /api/production/:id
 router.delete('/:id', authenticate, (req, res) => {
   try {
