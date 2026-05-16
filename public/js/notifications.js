@@ -85,21 +85,25 @@ function buildUsersPage(users) {
         <thead><tr><th style="width:200px">User</th><th>Email</th><th>Role</th><th>Department</th><th style="width:90px">Status</th><th style="width:90px">Actions</th></tr></thead>
         <tbody>
           ${users.length === 0 ? `<tr><td colspan="6">${empty('No users found')}</td></tr>` :
-            users.map(u => `
+            users.map(u => {
+                const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.name || '—';
+                const deptLabel = u.department_name || u.department || '—';
+                const statusLabel = u.is_active === 1 || u.is_active === true ? 'active' : (u.is_active === 0 || u.is_active === false ? 'inactive' : 'active');
+                return `
               <tr>
                 <td><div style="display:flex;align-items:center;gap:9px">
-                  <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${initials(u.name||u.email)}</div>
-                  <div><div style="font-size:12px;font-weight:600">${esc(u.name||'—')}</div></div>
+                  <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${initials(fullName)}</div>
+                  <div><div style="font-size:12px;font-weight:600">${esc(fullName)}</div></div>
                 </div></td>
                 <td style="color:var(--txt2)">${esc(u.email||'—')}</td>
                 <td>${pill(u.role||'user')}</td>
-                <td style="color:var(--txt2)">${esc(u.department||'—')}</td>
-                <td>${pill(u.is_active||u.active||u.status||'active')}</td>
+                <td style="color:var(--txt2)">${esc(deptLabel)}</td>
+                <td>${pill(statusLabel)}</td>
                 <td><div style="display:flex;gap:4px">
                   <button class="icon-btn" style="width:26px;height:26px;font-size:12px" onclick="openEditUser(${u.id})" title="Edit"><i class="ti ti-edit"></i></button>
-                  ${u.id !== App.user?.id ? `<button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:#f87171" onclick="deleteUser(${u.id},'${esc(u.name||u.email)}')" title="Delete"><i class="ti ti-trash"></i></button>` : ''}
+                  ${u.id !== App.user?.id ? `<button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:#f87171" onclick="deleteUser(${u.id},'${esc(fullName)}')" title="Delete"><i class="ti ti-trash"></i></button>` : ''}
                 </div></td>
-              </tr>`).join('')}
+              </tr>`;}).join('')
         </tbody>
       </table></div>
     </div>
@@ -157,20 +161,31 @@ async function submitAddUser() {
   } catch (err) { toast(err.message, 'error'); }
 }
 
-function openEditUser(id) {
+async function openEditUser(id) {
   const u = _usersAll.find(x => x.id === id);
   if (!u) return;
+  let depts = [];
+  try { const r = await API.departments.list(); depts = Array.isArray(r) ? r : (r.departments || []); } catch {}
+  const roles = ['dept_user','dept_head','hr_admin','system_admin'];
   openModal('Edit user', `
     <div class="form-section">
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Name</label><input id="ue-name" class="form-input" value="${esc(u.name||'')}"/></div>
+        <div class="form-group"><label class="form-label">First name</label><input id="ue-fname" class="form-input" value="${esc(u.first_name||'')}"/></div>
+        <div class="form-group"><label class="form-label">Last name</label><input id="ue-lname" class="form-input" value="${esc(u.last_name||'')}"/></div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label class="form-label">Role</label>
           <select id="ue-role" class="form-select">
-            ${['user','manager','operator','qc','admin'].map(r => `<option value="${r}" ${(u.role||'')===r?'selected':''}>${r}</option>`).join('')}
+            ${roles.map(r => `<option value="${r}" ${(u.role||'')===r?'selected':''}>${r.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Department</label>
+          <select id="ue-dept-id" class="form-select">
+            <option value="">— None —</option>
+            ${depts.map(d => `<option value="${d.id}" ${u.department_id===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}
           </select>
         </div>
       </div>
-      <div class="form-group"><label class="form-label">Department</label><input id="ue-dept" class="form-input" value="${esc(u.department||'')}"/></div>
       <div class="form-actions">
         <button class="sec-btn" onclick="forceCloseModal()">Cancel</button>
         <button class="primary-btn" onclick="submitEditUser(${id})"><i class="ti ti-check"></i> Save</button>
@@ -181,7 +196,12 @@ function openEditUser(id) {
 
 async function submitEditUser(id) {
   try {
-    await API.users.update(id, { name: $('#ue-name')?.value.trim(), role: $('#ue-role')?.value, department: $('#ue-dept')?.value.trim() });
+    await API.users.update(id, {
+      firstName: $('#ue-fname')?.value.trim(),
+      lastName:  $('#ue-lname')?.value.trim(),
+      role:       $('#ue-role')?.value,
+      departmentId: $('#ue-dept-id')?.value || null
+    });
     forceCloseModal(); toast('User updated'); renderUsers();
   } catch (err) { toast(err.message, 'error'); }
 }
