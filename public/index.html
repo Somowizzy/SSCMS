@@ -48,24 +48,48 @@
       </div>
       <div class="role-badge"><i class="ti ti-shield-check"></i> Secure access</div>
       <div id="login-error" class="login-error" style="display:none"></div>
-      <div class="field">
-        <label class="field-label">Email address</label>
-        <div class="field-wrap">
-          <i class="ti ti-mail"></i>
-          <input class="field-input" id="login-email" type="email" placeholder="your@email.com" autocomplete="email"/>
+      <div id="login-main-form">
+        <div class="field">
+          <label class="field-label">Email address</label>
+          <div class="field-wrap">
+            <i class="ti ti-mail"></i>
+            <input class="field-input" id="login-email" type="email" placeholder="your@email.com" autocomplete="email"/>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Password</label>
+          <div class="field-wrap">
+            <i class="ti ti-lock"></i>
+            <input class="field-input" id="login-password" type="password" placeholder="Enter your password" autocomplete="current-password"/>
+            <button class="eye-btn" type="button" onclick="togglePass()"><i class="ti ti-eye" id="eye-ico"></i></button>
+          </div>
+        </div>
+        <button class="login-btn" id="login-btn" onclick="doLogin()">
+          <i class="ti ti-login"></i><span>Sign in to dashboard</span>
+        </button>
+        <div style="text-align:center;margin-top:14px">
+          <span onclick="showResetForm()" style="font-size:12px;color:var(--blue2);cursor:pointer;text-decoration:underline">Forgot password?</span>
         </div>
       </div>
-      <div class="field">
-        <label class="field-label">Password</label>
-        <div class="field-wrap">
-          <i class="ti ti-lock"></i>
-          <input class="field-input" id="login-password" type="password" placeholder="Enter your password" autocomplete="current-password"/>
-          <button class="eye-btn" type="button" onclick="togglePass()"><i class="ti ti-eye" id="eye-ico"></i></button>
+      <div id="reset-section" style="display:none;margin-top:4px">
+        <div style="margin-bottom:14px">
+          <div style="font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:6px">Reset your password</div>
+          <p style="font-size:13px;color:var(--txt2)">Enter your email and your password will be reset to the default.</p>
+        </div>
+        <div class="field">
+          <label class="field-label">Email address</label>
+          <div class="field-wrap">
+            <i class="ti ti-mail"></i>
+            <input class="field-input" id="reset-email" type="email" placeholder="your@email.com"/>
+          </div>
+        </div>
+        <button class="login-btn" id="reset-btn" onclick="doReset()" style="background:var(--teal);box-shadow:0 2px 12px rgba(20,184,166,.35)">
+          <i class="ti ti-key"></i><span>Reset password</span>
+        </button>
+        <div style="text-align:center;margin-top:12px">
+          <span onclick="hideResetForm()" style="font-size:12px;color:var(--txt2);cursor:pointer">&#8592; Back to login</span>
         </div>
       </div>
-      <button class="login-btn" id="login-btn" onclick="doLogin()">
-        <i class="ti ti-login"></i><span>Sign in to dashboard</span>
-      </button>
       <div class="form-footer">SSCMS &copy; 2026 &nbsp;&middot;&nbsp; Preform &amp; Cap Division</div>
     </div>
   </div>

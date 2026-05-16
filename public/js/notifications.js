@@ -67,7 +67,9 @@ async function renderUsers() {
   setHTML('#page-content', loading());
   try {
     const res  = await API.users.list();
-    _usersAll  = Array.isArray(res) ? res : (res.users || res.data || []);
+    const all  = Array.isArray(res) ? res : (res.users || res.data || []);
+    // Only show active users — deleted/deactivated users should not appear
+    _usersAll  = all.filter(u => u.is_active === 1 || u.is_active === true);
     buildUsersPage(_usersAll);
   } catch (err) {
     setHTML('#page-content', `<div class="empty-state"><i class="ti ti-alert-circle text-red"></i><p>${esc(err.message)}</p></div>`);
@@ -110,22 +112,56 @@ function buildUsersPage(users) {
   `);
 }
 
+let _addUserDepts = [];
+
+function _deptOptionsForRole(role, selectedId) {
+  const adminRoles = ['hr_admin', 'system_admin'];
+  const filtered = adminRoles.includes(role)
+    ? _addUserDepts
+    : _addUserDepts.filter(d => !/hr.*(admin|administration)|administration.*hr/i.test(d.name) && !/^hr\s*&/i.test(d.name));
+  return `<option value="">— None —</option>` +
+    filtered.map(d => `<option value="${d.id}" ${String(d.id) === String(selectedId) ? 'selected' : ''}>${esc(d.name)}</option>`).join('');
+}
+
+function _autoUserEmail() {
+  const ln = $('#u-lname')?.value.trim();
+  const emailEl = $('#u-email');
+  if (emailEl && ln) emailEl.value = ln + '@sscms.com';
+}
+
+function _userRoleChange() {
+  const role = $('#u-role')?.value;
+  const deptSel = $('#u-dept-id');
+  if (!deptSel) return;
+  const adminRoles = ['hr_admin', 'system_admin'];
+  if (adminRoles.includes(role)) {
+    // auto-select HR & Administration department
+    const hrDept = _addUserDepts.find(d => /hr.*(admin|administration)|^hr\s*&/i.test(d.name));
+    deptSel.innerHTML = _deptOptionsForRole(role, hrDept?.id);
+    if (hrDept) deptSel.value = String(hrDept.id);
+    deptSel.disabled = true;
+  } else {
+    deptSel.disabled = false;
+    deptSel.innerHTML = _deptOptionsForRole(role, '');
+  }
+}
+
 async function openAddUser() {
-  let depts = [];
-  try { const r = await API.departments.list(); depts = Array.isArray(r) ? r : (r.departments || []); } catch {}
+  _addUserDepts = [];
+  try { const r = await API.departments.list(); _addUserDepts = Array.isArray(r) ? r : (r.departments || []); } catch {}
   openModal('Invite user', `
     <div class="form-section">
       <div class="form-row">
         <div class="form-group"><label class="form-label">First name *</label><input id="u-fname" class="form-input" placeholder="John"/></div>
-        <div class="form-group"><label class="form-label">Last name *</label><input id="u-lname" class="form-input" placeholder="Doe"/></div>
+        <div class="form-group"><label class="form-label">Last name *</label><input id="u-lname" class="form-input" placeholder="Doe" oninput="_autoUserEmail()"/></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Email *</label><input id="u-email" class="form-input" type="email" placeholder="john@company.com"/></div>
-        <div class="form-group"><label class="form-label">Password *</label><input id="u-pass" class="form-input" type="password" placeholder="Min 6 characters"/></div>
+        <div class="form-group"><label class="form-label">Email *</label><input id="u-email" class="form-input" type="email" placeholder="Doe@sscms.com"/></div>
+        <div class="form-group"><label class="form-label">Password *</label><input id="u-pass" class="form-input" type="text" value="#1234#"/></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Role *</label>
-          <select id="u-role" class="form-select">
+          <select id="u-role" class="form-select" onchange="_userRoleChange()">
             <option value="dept_user">Department User</option>
             <option value="dept_head">Department Head</option>
             <option value="hr_admin">HR Admin</option>
@@ -134,8 +170,7 @@ async function openAddUser() {
         </div>
         <div class="form-group"><label class="form-label">Department</label>
           <select id="u-dept-id" class="form-select">
-            <option value="">— None —</option>
-            ${depts.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join('')}
+            ${_deptOptionsForRole('dept_user', '')}
           </select>
         </div>
       </div>

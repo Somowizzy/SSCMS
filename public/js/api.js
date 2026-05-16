@@ -20,15 +20,16 @@ const API = (() => {
 
   return {
     auth: {
-      login:  (email, password) => post('/api/auth/login',  { email, password }),
-      logout: ()                => post('/api/auth/logout', {}),
-      me:     ()                => get('/api/auth/me'),
+      login:         (email, password) => post('/api/auth/login',  { email, password }),
+      logout:        ()                => post('/api/auth/logout', {}),
+      me:            ()                => get('/api/auth/me'),
+      resetPassword: (email)           => post('/api/auth/reset-password', { email }),
     },
     users: {
       list:   ()          => get('/api/users'),
       get:    (id)        => get(`/api/users/${id}`),
       create: (d)         => post('/api/users', d),
-      update: (id, d)     => put(`/api/users/${id}`, d),
+      update: (id, d)     => patch(`/api/users/${id}`, d),
       delete: (id)        => del(`/api/users/${id}`),
     },
     departments: {
@@ -51,8 +52,8 @@ const API = (() => {
       get:      (id)      => get(`/api/requests/${id}`),
       create:   (d)       => post('/api/requests', d),
       update:   (id, d)   => put(`/api/requests/${id}`, d),
-      approve:  (id)      => post(`/api/requests/${id}/approve`, {}),
-      reject:   (id, r)   => post(`/api/requests/${id}/reject`, { reason: r }),
+      approve:  (id)      => patch(`/api/requests/${id}/approve`, { action: 'approved' }),
+      reject:   (id, r)   => patch(`/api/requests/${id}/reject`, { reason: r }),
       complete: (id)      => post(`/api/requests/${id}/complete`, {}),
       delete:   (id)      => del(`/api/requests/${id}`),
     },

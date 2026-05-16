@@ -102,6 +102,28 @@ router.get('/me', authenticate, (req, res) => {
   });
 });
 
+// POST /api/auth/reset-password - Reset password to default #1234#
+router.post('/reset-password', (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    const db = getDb();
+    const user = db.prepare('SELECT * FROM users WHERE email = ? AND is_active = 1').get(email.toLowerCase().trim());
+    if (!user) return res.json({ message: 'If that email exists, the password has been reset to: #1234#' });
+    const hash = bcrypt.hashSync('#1234#', 10);
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, user.id);
+    const { createNotification } = require('../middleware/auth');
+    const admins = db.prepare("SELECT id FROM users WHERE role IN ('hr_admin','system_admin') AND is_active = 1").all();
+    admins.forEach(a => {
+      if (a.id !== user.id) createNotification(a.id, 'Password Reset', `${user.first_name} ${user.last_name} (${user.email}) reset their password to default`, 'warning', '/users');
+    });
+    logAudit(user.id, `${user.first_name} ${user.last_name}`, 'Password reset', 'auth', 'Password reset to default via login page');
+    res.json({ message: 'Password reset successfully. Your new password is: #1234#' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
 // POST /api/auth/reset-request - Request a password reset (public endpoint)
 router.post('/reset-request', (req, res) => {
   try {

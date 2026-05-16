@@ -77,18 +77,30 @@ function showLogin() {
   $('#login-screen').style.display = 'flex';
 }
 
+function canManage() {
+  return ['hr_admin', 'system_admin', 'dept_head'].includes(App.user?.role);
+}
+
+function isAdmin() {
+  return ['hr_admin', 'system_admin'].includes(App.user?.role);
+}
+
 function showApp() {
   $('#login-screen').style.display = 'none';
   $('#app-shell').style.display = 'flex';
   // user card
-  const name = App.user?.name || App.user?.email || 'User';
+  const name = App.user?.name
+    || [App.user?.first_name || App.user?.firstName, App.user?.last_name || App.user?.lastName].filter(Boolean).join(' ')
+    || App.user?.email || 'User';
   const role = App.user?.role || App.user?.department || '—';
   setText('#user-name', name);
   setText('#user-role', role);
   setText('#user-avatar', initials(name));
   // admin nav
-  const isAdmin = ['hr_admin','system_admin'].includes(App.user?.role);
-  $$('.sb-admin').forEach(e => e.style.display = isAdmin ? '' : 'none');
+  $$('.sb-admin').forEach(e => e.style.display = isAdmin() ? '' : 'none');
+  // hide CTA for view-only dept_user
+  const ctaBtn = $('#cta-btn');
+  if (ctaBtn) ctaBtn.style.display = canManage() ? '' : 'none';
 }
 
 /* ── Navigation ─────────────────────────────────────────── */

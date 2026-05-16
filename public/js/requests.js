@@ -58,7 +58,7 @@ function filterReqs() {
 
 function renderReqTable(items) {
   if (!items.length) { setHTML('#req-table', empty('No requests found', 'ti-clipboard-list')); return; }
-  const canApprove = ['hr_admin','system_admin','dept_head'].includes(App.user?.role);
+  const canApprove = canManage();
   setHTML('#req-table', `
     <div class="tbl-wrap"><table class="data-table">
       <thead><tr>
@@ -82,7 +82,7 @@ function renderReqTable(items) {
                   <button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:var(--green)" onclick="approveReq(${r.id})" title="Approve"><i class="ti ti-check"></i></button>
                   <button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:#f87171" onclick="rejectReq(${r.id})" title="Reject"><i class="ti ti-x"></i></button>` : ''}
                 ${(r.status||'').toLowerCase() === 'approved' ? `<button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:var(--blue2)" onclick="completeReq(${r.id})" title="Mark complete"><i class="ti ti-check-all"></i></button>` : ''}
-                <button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:#f87171" onclick="deleteReq(${r.id})" title="Delete"><i class="ti ti-trash"></i></button>
+                ${canApprove ? `<button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:#f87171" onclick="deleteReq(${r.id})" title="Delete"><i class="ti ti-trash"></i></button>` : ''}
               </div>
             </td>
           </tr>`).join('')}
@@ -91,21 +91,44 @@ function renderReqTable(items) {
   `);
 }
 
+// Request types available per department (dept_id → allowed types)
+const REQ_TYPES_BY_DEPT = {
+  1: [['material_requisition','Material Requisition'], ['stock_adjustment','Stock Adjustment']],
+  2: [['production_run','Production Run'], ['material_requisition','Material Requisition'], ['stock_adjustment','Stock Adjustment']],
+  3: [['transfer_to_fg','Transfer to Finished Goods'], ['production_run','Production Run']],
+  4: [['shipping_request','Shipping Request'], ['transfer_to_fg','Transfer to Finished Goods']],
+  5: [['material_requisition','Material Requisition'], ['stock_adjustment','Stock Adjustment'],
+      ['production_run','Production Run'], ['transfer_to_fg','Transfer to Finished Goods'],
+      ['shipping_request','Shipping Request']],
+  _all: [['material_requisition','Material Requisition'], ['production_run','Production Run'],
+         ['transfer_to_fg','Transfer to Finished Goods'], ['shipping_request','Shipping Request'],
+         ['stock_adjustment','Stock Adjustment']],
+};
+
 async function openAddRequest() {
+  if (!canManage()) { toast('Only department heads or admins can submit requests', 'error'); return; }
+
+  const userDeptId = App.user?.departmentId ?? App.user?.department_id;
+  const isShipping = userDeptId == 4;
+
   let depts = [], prods = [];
   try { const r = await API.departments.list(); depts = Array.isArray(r) ? r : (r.departments||[]); } catch {}
-  try { const r = await API.inventory.list(); prods = Array.isArray(r) ? r : (r.items||[]); } catch {}
+
+  // Shipping dept sees finished goods; everyone else sees inventory
+  if (isShipping) {
+    try { const r = await API.finishedGoods.list(); prods = Array.isArray(r) ? r : (r.items||r.data||[]); } catch {}
+  } else {
+    try { const r = await API.inventory.list(); prods = Array.isArray(r) ? r : (r.items||[]); } catch {}
+  }
+
+  const typeOptions = (REQ_TYPES_BY_DEPT[userDeptId] || REQ_TYPES_BY_DEPT._all)
+    .map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+
   openModal('New request', `
     <div class="form-section">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Request type *</label>
-          <select id="r-type" class="form-select">
-            <option value="material_requisition">Material Requisition</option>
-            <option value="production_run">Production Run</option>
-            <option value="transfer_to_fg">Transfer to Finished Goods</option>
-            <option value="shipping_request">Shipping Request</option>
-            <option value="stock_adjustment">Stock Adjustment</option>
-          </select>
+          <select id="r-type" class="form-select">${typeOptions}</select>
         </div>
         <div class="form-group"><label class="form-label">Priority</label>
           <select id="r-priority" class="form-select">
@@ -120,10 +143,10 @@ async function openAddRequest() {
             ${depts.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join('')}
           </select>
         </div>
-        <div class="form-group"><label class="form-label">Material/Product</label>
+        <div class="form-group"><label class="form-label">${isShipping ? 'Finished Good' : 'Material/Product'}</label>
           <select id="r-prod" class="form-select">
             <option value="">— None —</option>
-            ${prods.map(p => `<option value="${p.product_id||p.id}">${esc(p.name)}</option>`).join('')}
+            ${prods.map(p => `<option value="${p.id||p.product_id||p.fg_id}">${esc(p.name||p.product_name||'—')}</option>`).join('')}
           </select>
         </div>
       </div>

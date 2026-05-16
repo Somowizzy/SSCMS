@@ -51,6 +51,44 @@ async function doLogout() {
 // Load live stats on login screen
 async function loadLoginStats() {}  // called after login, no-op here; stats shown on dashboard
 
+function showResetForm() {
+  $('#login-main-form').style.display = 'none';
+  $('#reset-section').style.display = 'block';
+  const errEl = $('#login-error');
+  if (errEl) errEl.style.display = 'none';
+}
+
+function hideResetForm() {
+  $('#login-main-form').style.display = '';
+  $('#reset-section').style.display = 'none';
+  const errEl = $('#login-error');
+  if (errEl) errEl.style.display = 'none';
+}
+
+async function doReset() {
+  const email = $('#reset-email')?.value.trim();
+  if (!email) { showLoginError('Please enter your email address.'); return; }
+  const btn = $('#reset-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="loading-spinner" style="width:18px;height:18px;border-width:2px"></div><span>Resetting...</span>';
+  try {
+    const res = await API.auth.resetPassword(email);
+    hideResetForm();
+    const el = $('#login-error');
+    if (el) {
+      el.textContent = res.message || 'Password reset successfully. Your new password is: #1234#';
+      el.style.display = 'block';
+      el.style.borderColor = 'rgba(20,184,166,.3)';
+      el.style.color = 'var(--teal)';
+    }
+  } catch (err) {
+    showLoginError(err.message || 'Failed to reset password.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-key"></i><span>Reset password</span>';
+  }
+}
+
 // Allow Enter key on login form
 document.addEventListener('DOMContentLoaded', () => {
   ['login-email','login-password'].forEach(id => {
