@@ -42,7 +42,7 @@ function buildReqPage(items) {
             <option value="completed">Completed</option>
             <option value="rejected">Rejected</option>
           </select>
-          <div class="card-hd-act" onclick="openAddRequest()"><i class="ti ti-plus"></i> New</div>
+          ${canManage() ? `<div class="card-hd-act" onclick="openAddRequest()"><i class="ti ti-plus"></i> New</div>` : ''}
         </div>
       </div>
       <div id="req-table"></div>
@@ -81,7 +81,7 @@ function renderReqTable(items) {
                 ${canApprove && (r.status||'').toLowerCase() === 'pending' ? `
                   <button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:var(--green)" onclick="approveReq(${r.id})" title="Approve"><i class="ti ti-check"></i></button>
                   <button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:#f87171" onclick="rejectReq(${r.id})" title="Reject"><i class="ti ti-x"></i></button>` : ''}
-                ${(r.status||'').toLowerCase() === 'approved' ? `<button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:var(--blue2)" onclick="completeReq(${r.id})" title="Mark complete"><i class="ti ti-check-all"></i></button>` : ''}
+                ${canApprove && (r.status||'').toLowerCase() === 'approved' ? `<button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:var(--blue2)" onclick="completeReq(${r.id})" title="Mark complete"><i class="ti ti-check-all"></i></button>` : ''}
                 ${canApprove ? `<button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:#f87171" onclick="deleteReq(${r.id})" title="Delete"><i class="ti ti-trash"></i></button>` : ''}
               </div>
             </td>
