@@ -103,7 +103,7 @@ function buildUsersPage(users) {
                   <button class="icon-btn" style="width:26px;height:26px;font-size:12px" onclick="openEditUser(${u.id})" title="Edit"><i class="ti ti-edit"></i></button>
                   ${u.id !== App.user?.id ? `<button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:#f87171" onclick="deleteUser(${u.id},'${esc(fullName)}')" title="Delete"><i class="ti ti-trash"></i></button>` : ''}
                 </div></td>
-              </tr>`;}).join('')
+              </tr>`;}).join('')}
         </tbody>
       </table></div>
     </div>
