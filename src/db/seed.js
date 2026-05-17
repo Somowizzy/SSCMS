@@ -208,6 +208,71 @@ function seedDatabase() {
   auditEntries.forEach(a => insertAudit.run(...a));
 
   console.log('  ✓ Database seeded with sample data');
+  // Note: seedPreformCatalog() is invoked separately from server.js on every
+  // startup so the catalog is guaranteed even when this function bails early.
 }
 
-module.exports = { seedDatabase };
+/**
+ * The actual preforms produced for each customer.
+ * [ customer, product, neck/size, color, qty, qualityStatus, availableForShipping ]
+ *
+ * Idempotent: inserts a finished_good product + a finished_goods stock row
+ * for any item that doesn't already exist. Safe to run on every startup,
+ * even when the database is already seeded.
+ */
+const PREFORM_CATALOG = [
+  // Nigerian Breweries — Amber
+  ['Nigerian Breweries',        'Maltina Preform',                              '28mm PCO 1881', 'Amber',         48000, 'passed',       1],
+  ['Nigerian Breweries',        'Amstel Malta Preform',                         '28mm PCO 1881', 'Amber',         42000, 'passed',       1],
+  ['Nigerian Breweries',        'Fayrouz Preform',                              '28mm PCO 1881', 'Amber',         30000, 'passed',       1],
+  // Nestlé — Pure Life Water (Blue)
+  ['Nestlé',                    'Pure Life Water Preform',                      '30/25 short',   'Blue',          55000, 'passed',       1],
+  // Nigerian Bottling Company — Clear + Crystal White
+  ['Nigerian Bottling Company', 'Coke / Fanta / Sprite Preform',                '28mm PCO 1881', 'Clear',         60000, 'passed',       1],
+  ['Nigerian Bottling Company', 'Eva Water Preform',                            '29/25 short',   'Crystal White', 50000, 'passed',       1],
+  ['Nigerian Bottling Company', 'Schweppes Preform',                            '28mm PCO 1881', 'Clear',         35000, 'passed',       1],
+  ['Nigerian Bottling Company', 'Predator Energy Preform',                      '28mm PCO 1881', 'Clear',         28000, 'under_review', 0],
+  // Rite Foods — Clear + Green + Crystal White
+  ['Rite Foods',                'Bigi Cola / Apple / Orange / Tropical Preform','28mm PCO 1881', 'Clear',         52000, 'passed',       1],
+  ['Rite Foods',                'Fearless Energy Drink Preform',                '28mm PCO 1881', 'Green',          26000, 'passed',       1],
+  ['Rite Foods',                'Bigi Premium Table Water Preform',             '29/25',         'Crystal White', 45000, 'under_review', 0],
+];
+
+function seedPreformCatalog() {
+  const db = getDb();
+
+  const findProduct = db.prepare('SELECT id FROM products WHERE name = ?');
+  const insertProduct = db.prepare(`
+    INSERT INTO products (name, description, category, unit, unit_price, reorder_level)
+    VALUES (?, ?, 'finished_good', 'pcs', ?, ?)
+  `);
+  const findFG = db.prepare('SELECT id FROM finished_goods WHERE batch_no = ?');
+  const insertFG = db.prepare(`
+    INSERT INTO finished_goods (product_name, production_job_id, quantity, batch_no, quality_status, available_for_shipping)
+    VALUES (?, NULL, ?, ?, ?, ?)
+  `);
+
+  let added = 0;
+  PREFORM_CATALOG.forEach(([customer, product, size, color, qty, qualityStatus, avail], idx) => {
+    const name = `${product} (${color})`;
+    const description = `${customer} • ${size} • ${color} preform`;
+    const batchNo = `FG-PRE-${String(idx + 1).padStart(3, '0')}`;
+
+    let row = findProduct.get(name);
+    if (!row) {
+      // Unit price scaled roughly by neck size / color complexity
+      const unitPrice = color === 'Clear' ? 9.5 : 11.0;
+      insertProduct.run(name, description, unitPrice, 5000);
+      added++;
+    }
+
+    if (!findFG.get(batchNo)) {
+      insertFG.run(name, qty, batchNo, qualityStatus, avail);
+    }
+  });
+
+  if (added > 0) console.log(`  ✓ Preform catalog seeded (${added} new products)`);
+  else console.log('  ✓ Preform catalog already present');
+}
+
+module.exports = { seedDatabase, seedPreformCatalog };

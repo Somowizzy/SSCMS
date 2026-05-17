@@ -4,7 +4,7 @@ const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const path = require('path');
 const { initDatabase } = require('./src/db/database');
-const { seedDatabase } = require('./src/db/seed');
+const { seedDatabase, seedPreformCatalog } = require('./src/db/seed');
 
 // Import routes
 const authRoutes = require('./src/routes/auth');
@@ -76,6 +76,9 @@ async function start() {
   try {
     await initDatabase();
     seedDatabase();
+    // Always ensure the real preform catalog exists (idempotent),
+    // even if the database was already seeded on a previous run.
+    seedPreformCatalog();
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`\n  ╔══════════════════════════════════════════════╗`);
       console.log(`  ║   SSCMS - Smart Supply Chain Management     ║`);
