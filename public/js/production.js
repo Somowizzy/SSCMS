@@ -115,12 +115,39 @@ function renderProdTable(runs) {
 }
 
 /* ── Add run ── */
-function openAddProduction() {
+function _fpProductChange() {
+  const sel = $('#fp-product');
+  const wrap = $('#fp-product-custom-wrap');
+  if (!sel || !wrap) return;
+  wrap.style.display = sel.value === '__custom__' ? '' : 'none';
+}
+
+async function openAddProduction() {
+  // Pull the preform catalog (the products we actually produce)
+  let names = [];
+  try {
+    const r = await API.finishedGoods.list();
+    const items = Array.isArray(r) ? r : (r.items || r.data || []);
+    names = [...new Set(items.map(i => i.product_name || i.productName).filter(Boolean))].sort();
+  } catch {}
+
+  const options = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+
   openModal('New production run', `
     <div class="form-section">
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Product / Name *</label><input id="fp-product" class="form-input" placeholder="e.g. 28mm Preform"/></div>
+        <div class="form-group"><label class="form-label">Preform / Product *</label>
+          <select id="fp-product" class="form-select" onchange="_fpProductChange()">
+            ${names.length ? '' : '<option value="">— No catalog found —</option>'}
+            ${options}
+            <option value="__custom__">+ Other (type a custom name)…</option>
+          </select>
+        </div>
         <div class="form-group"><label class="form-label">Machine</label><input id="fp-machine" class="form-input" placeholder="e.g. Machine #1"/></div>
+      </div>
+      <div class="form-group" id="fp-product-custom-wrap" style="display:none">
+        <label class="form-label">Custom product name *</label>
+        <input id="fp-product-custom" class="form-input" placeholder="e.g. 28mm Preform (Clear)"/>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Target quantity *</label><input id="fp-target" class="form-input" type="number" min="1" placeholder="e.g. 85000"/></div>
@@ -136,7 +163,8 @@ function openAddProduction() {
 }
 
 async function submitAddProduction() {
-  const product = $('#fp-product')?.value.trim();
+  const sel = $('#fp-product')?.value;
+  const product = sel === '__custom__' ? $('#fp-product-custom')?.value.trim() : (sel || '').trim();
   const target  = Number($('#fp-target')?.value);
   if (!product || !target) { toast('Product and target qty are required', 'error'); return; }
   try {
