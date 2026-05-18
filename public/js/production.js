@@ -7,7 +7,7 @@ async function renderProduction() {
       API.production.list(),
       API.inventory.list().catch(() => []),
     ]);
-    _prodAll = Array.isArray(res) ? res : (res.items || res.data || []);
+    _prodAll = Array.isArray(res) ? res : (res.jobs || res.items || res.data || []);
     const inv = Array.isArray(invRes) ? invRes : (invRes.items || []);
     window._pageSearch = q => renderProdTable(_prodAll.filter(p =>
       [p.name, p.product, p.machine, p.operator, String(p.id)].some(v => String(v||'').toLowerCase().includes(q.toLowerCase()))
@@ -19,9 +19,9 @@ async function renderProduction() {
 }
 
 function buildProdPage(runs, inv) {
-  const active    = runs.filter(r => ['active','running','in-progress'].includes((r.status||'').toLowerCase())).length;
+  const active    = runs.filter(r => ['active','running','in-progress','in_progress','scheduled'].includes((r.status||'').toLowerCase())).length;
   const completed = runs.filter(r => (r.status||'').toLowerCase() === 'completed').length;
-  const rejected  = runs.reduce((s, r) => s + (Number(r.rejected_qty || r.rejectedQty) || 0), 0);
+  const rejected  = runs.reduce((s, r) => s + (Number(r.rejected_qty ?? r.rejectedQty ?? r.defects) || 0), 0);
   const rpetKg    = runs.reduce((s, r) => s + (Number(r.rpet_kg || r.rpetKg) || 0), 0);
 
   setHTML('#page-content', `
@@ -83,14 +83,14 @@ function renderProdTable(runs) {
         </tr></thead>
         <tbody>
           ${runs.map(r => {
-            const produced = r.produced_qty || r.producedQty || r.actual_qty || 0;
-            const target   = r.target_qty   || r.targetQty   || r.quantity   || 0;
-            const rejected = r.rejected_qty || r.rejectedQty || 0;
-            const rpetKg   = r.rpet_kg      || r.rpetKg      || 0;
+            const produced = r.produced_qty ?? r.producedQty ?? r.quantity_completed ?? 0;
+            const target   = r.target_qty   ?? r.targetQty   ?? r.quantity_requested ?? r.quantity ?? 0;
+            const rejected = r.rejected_qty ?? r.rejectedQty ?? r.defects ?? 0;
+            const rpetKg   = r.rpet_kg      ?? r.rpetKg      ?? 0;
             const pct = target ? Math.round((produced/target)*100) : 0;
             return `<tr>
               <td class="mono">#${esc(r.id)}</td>
-              <td><strong>${esc(r.product||r.name||'—')}</strong></td>
+              <td><strong>${esc(r.product||r.product_name||r.name||'—')}</strong></td>
               <td style="color:var(--txt2)">${esc(r.machine||r.machine_id||'—')}</td>
               <td>${fmt(target)}</td>
               <td>${fmt(produced)}</td>
@@ -100,7 +100,7 @@ function renderProdTable(runs) {
               ${tdDate(r.created_at||r.createdAt||r.date)}
               <td>
                 <div style="display:flex;gap:4px">
-                  ${['active','running','in-progress'].includes((r.status||'').toLowerCase())
+                  ${['active','running','in-progress','in_progress','scheduled'].includes((r.status||'').toLowerCase())
                     ? `<button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:var(--green)" onclick="openCompleteRun(${r.id})" title="Complete"><i class="ti ti-check"></i></button>` : ''}
                   <button class="icon-btn" style="width:26px;height:26px;font-size:12px" onclick="openEditRun(${r.id})" title="Edit"><i class="ti ti-edit"></i></button>
                   <button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:#f87171" onclick="deleteRun(${r.id})" title="Delete"><i class="ti ti-trash"></i></button>
