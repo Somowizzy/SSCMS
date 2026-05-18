@@ -10,3 +10,7 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
+      # Neon Postgres connection string for DB snapshot persistence.
+      # Value is set in the Render dashboard (Environment), never committed.
+      - key: DATABASE_URL
+        sync: false

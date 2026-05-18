@@ -3,7 +3,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const path = require('path');
-const { initDatabase } = require('./src/db/database');
+const { initDatabase, closeDatabase } = require('./src/db/database');
 const { seedDatabase, seedPreformCatalog } = require('./src/db/seed');
 
 // Import routes
@@ -90,5 +90,18 @@ async function start() {
     process.exit(1);
   }
 }
+
+// Graceful shutdown — flush the latest DB snapshot to Neon before exit.
+// Render sends SIGTERM before each deploy/restart.
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`\n  → ${signal} received — saving database before exit...`);
+  try { await closeDatabase(); } catch (e) { console.error(e); }
+  process.exit(0);
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 start();

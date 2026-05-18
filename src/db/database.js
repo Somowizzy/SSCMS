@@ -3,9 +3,19 @@ const path = require('path');
 const fs = require('fs');
 
 const DB_PATH = path.join(__dirname, '..', '..', 'data', 'sscms.db');
+const DATABASE_URL = process.env.DATABASE_URL || '';
+const USE_NEON = !!DATABASE_URL;
 
 let db;
 let sqlJsDb;
+let pgPool = null;
+
+// Debounced/periodic flush state for Neon snapshot persistence
+let flushTimer = null;
+let periodicTimer = null;
+let flushing = false;
+let pendingFlush = false;
+let dirty = false;
 
 /**
  * Compatibility wrapper around sql.js to match the better-sqlite3 API.
@@ -20,43 +30,31 @@ class BetterSqlite3Compat {
     const database = this._db;
     return {
       get(...params) {
-        try {
-          const stmt = database.prepare(sql);
-          if (params.length > 0) stmt.bind(params);
-          const result = stmt.step() ? stmt.getAsObject() : undefined;
-          stmt.free();
-          return result;
-        } catch (err) {
-          throw err;
-        }
+        const stmt = database.prepare(sql);
+        if (params.length > 0) stmt.bind(params);
+        const result = stmt.step() ? stmt.getAsObject() : undefined;
+        stmt.free();
+        return result;
       },
       all(...params) {
-        try {
-          const results = [];
-          const stmt = database.prepare(sql);
-          if (params.length > 0) stmt.bind(params);
-          while (stmt.step()) {
-            results.push(stmt.getAsObject());
-          }
-          stmt.free();
-          return results;
-        } catch (err) {
-          throw err;
+        const results = [];
+        const stmt = database.prepare(sql);
+        if (params.length > 0) stmt.bind(params);
+        while (stmt.step()) {
+          results.push(stmt.getAsObject());
         }
+        stmt.free();
+        return results;
       },
       run(...params) {
-        try {
-          database.run(sql, params);
-          const lastId = database.exec("SELECT last_insert_rowid() as id")[0];
-          const changesResult = database.exec("SELECT changes() as c")[0];
-          const lastInsertRowid = lastId ? lastId.values[0][0] : 0;
-          const changes = changesResult ? changesResult.values[0][0] : 0;
-          // Persist after each write operation
-          saveDatabase();
-          return { lastInsertRowid, changes };
-        } catch (err) {
-          throw err;
-        }
+        database.run(sql, params);
+        const lastId = database.exec("SELECT last_insert_rowid() as id")[0];
+        const changesResult = database.exec("SELECT changes() as c")[0];
+        const lastInsertRowid = lastId ? lastId.values[0][0] : 0;
+        const changes = changesResult ? changesResult.values[0][0] : 0;
+        // Persist after each write operation
+        saveDatabase();
+        return { lastInsertRowid, changes };
       }
     };
   }
@@ -75,16 +73,58 @@ class BetterSqlite3Compat {
   }
 }
 
+/**
+ * Persist the in-memory database.
+ * - Neon mode: schedule a debounced async snapshot upload (non-blocking).
+ * - Local mode: write the .db file to disk (original behaviour).
+ */
 function saveDatabase() {
   if (!sqlJsDb) return;
+
+  if (USE_NEON) {
+    dirty = true;
+    scheduleNeonFlush();
+    return;
+  }
+
   try {
     const dir = path.dirname(DB_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const data = sqlJsDb.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(DB_PATH, buffer);
+    fs.writeFileSync(DB_PATH, Buffer.from(data));
   } catch (err) {
     console.error('Failed to save database:', err);
+  }
+}
+
+function scheduleNeonFlush() {
+  if (flushTimer) clearTimeout(flushTimer);
+  // Debounce: wait for a brief lull in writes, then upload the snapshot.
+  flushTimer = setTimeout(() => { flushToNeon().catch(() => {}); }, 1500);
+}
+
+async function flushToNeon() {
+  if (!USE_NEON || !sqlJsDb || !pgPool || !dirty) return;
+  if (flushing) { pendingFlush = true; return; }
+  flushing = true;
+  dirty = false;
+  try {
+    const buffer = Buffer.from(sqlJsDb.export());
+    await pgPool.query(
+      `INSERT INTO db_snapshot (id, data, updated_at)
+       VALUES (1, $1, now())
+       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+      [buffer]
+    );
+  } catch (err) {
+    dirty = true; // retry on next cycle
+    console.error('Neon snapshot flush failed:', err.message);
+  } finally {
+    flushing = false;
+    if (pendingFlush) {
+      pendingFlush = false;
+      scheduleNeonFlush();
+    }
   }
 }
 
@@ -97,15 +137,45 @@ function getDb() {
 
 async function initDatabaseAsync() {
   const SQL = await initSqlJs();
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-  // Load existing database or create new one
-  if (fs.existsSync(DB_PATH)) {
-    const fileBuffer = fs.readFileSync(DB_PATH);
-    sqlJsDb = new SQL.Database(fileBuffer);
+  if (USE_NEON) {
+    const { Pool } = require('pg');
+    pgPool = new Pool({
+      connectionString: DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      max: 3,
+    });
+
+    // Ensure the snapshot table exists
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS db_snapshot (
+        id INTEGER PRIMARY KEY,
+        data BYTEA NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT now()
+      )
+    `);
+
+    // Load the existing snapshot, or start fresh (server.js will seed it)
+    const { rows } = await pgPool.query('SELECT data FROM db_snapshot WHERE id = 1');
+    if (rows.length && rows[0].data) {
+      sqlJsDb = new SQL.Database(new Uint8Array(rows[0].data));
+      console.log('  ✓ Database restored from Neon snapshot');
+    } else {
+      sqlJsDb = new SQL.Database();
+      console.log('  ✓ No Neon snapshot found — starting fresh');
+    }
+
+    // Safety net: periodic flush in case writes never pause
+    periodicTimer = setInterval(() => { flushToNeon().catch(() => {}); }, 20000);
+    if (periodicTimer.unref) periodicTimer.unref();
   } else {
-    sqlJsDb = new SQL.Database();
+    const dir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (fs.existsSync(DB_PATH)) {
+      sqlJsDb = new SQL.Database(fs.readFileSync(DB_PATH));
+    } else {
+      sqlJsDb = new SQL.Database();
+    }
   }
 
   db = new BetterSqlite3Compat(sqlJsDb);
@@ -320,7 +390,7 @@ async function initDatabaseAsync() {
     );
   `);
 
-  console.log('  ✓ Database initialized successfully');
+  console.log(`  ✓ Database initialized successfully (${USE_NEON ? 'Neon-persisted' : 'local file'})`);
   return db;
 }
 
@@ -331,4 +401,17 @@ function initDatabase() {
   return initDatabaseAsync();
 }
 
-module.exports = { getDb, initDatabase };
+/**
+ * Flush any pending changes and close the pool. Called on graceful shutdown
+ * (Render sends SIGTERM before a deploy) so the latest data reaches Neon.
+ */
+async function closeDatabase() {
+  if (flushTimer) clearTimeout(flushTimer);
+  if (periodicTimer) clearInterval(periodicTimer);
+  if (USE_NEON) {
+    try { await flushToNeon(); } catch (e) { /* best effort */ }
+    try { if (pgPool) await pgPool.end(); } catch (e) { /* ignore */ }
+  }
+}
+
+module.exports = { getDb, initDatabase, closeDatabase };
