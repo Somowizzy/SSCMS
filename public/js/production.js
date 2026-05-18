@@ -213,7 +213,7 @@ async function submitAddProduction() {
   if (!product) { toast('Please select or enter a preform', 'error'); return; }
   if (!target)  { toast('Target quantity is required', 'error'); return; }
   try {
-    await API.production.create({ product, name: product, machine, target_qty: target, notes: $('#fp-notes')?.value.trim(), status: 'active' });
+    await API.production.create({ productName: product, machine, quantityRequested: target, notes: $('#fp-notes')?.value.trim() });
     forceCloseModal(); toast('Production run started'); renderProduction();
   } catch (err) { toast(err.message, 'error'); }
 }
