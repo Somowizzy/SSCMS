@@ -115,43 +115,84 @@ function renderProdTable(runs) {
 }
 
 /* ── Add run ── */
-function _fpProductChange() {
-  const sel = $('#fp-product');
-  const wrap = $('#fp-product-custom-wrap');
-  if (!sel || !wrap) return;
-  wrap.style.display = sel.value === '__custom__' ? '' : 'none';
+// The 9 production machines
+const PROD_MACHINES = [
+  'Husky P1', 'Husky P2', 'Husky P3', 'Husky P4', 'Husky P5', 'Husky P6',
+  'SACMI S1', 'SACMI S2', 'IPS'
+];
+
+// Preform catalog grouped by customer (names match the seeded catalog exactly)
+const PREFORMS_BY_CUSTOMER = {
+  'Nigerian Breweries': [
+    'Maltina Preform (Amber)',
+    'Amstel Malta Preform (Amber)',
+    'Fayrouz Preform (Amber)',
+  ],
+  'Nestlé': [
+    'Pure Life Water Preform (Blue)',
+  ],
+  'Nigerian Bottling Company': [
+    'Coke / Fanta / Sprite Preform (Clear)',
+    'Eva Water Preform (Crystal White)',
+    'Schweppes Preform (Clear)',
+    'Predator Energy Preform (Clear)',
+  ],
+  'Rite Foods': [
+    'Bigi Cola / Apple / Orange / Tropical Preform (Clear)',
+    'Fearless Energy Drink Preform (Green)',
+    'Bigi Premium Table Water Preform (Crystal White)',
+  ],
+};
+
+// Repopulate the preform dropdown when the customer changes
+function _fpCustomerChange() {
+  const cust = $('#fp-customer')?.value;
+  const prodSel = $('#fp-product');
+  const customWrap = $('#fp-product-custom-wrap');
+  if (!prodSel) return;
+
+  if (cust === '__custom__') {
+    prodSel.innerHTML = '<option value="">— Custom (enter name below) —</option>';
+    prodSel.disabled = true;
+    if (customWrap) customWrap.style.display = '';
+  } else {
+    const list = PREFORMS_BY_CUSTOMER[cust] || [];
+    prodSel.disabled = false;
+    prodSel.innerHTML = list.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    if (customWrap) customWrap.style.display = 'none';
+  }
 }
 
 async function openAddProduction() {
-  // Pull the preform catalog (the products we actually produce)
-  let names = [];
-  try {
-    const r = await API.finishedGoods.list();
-    const items = Array.isArray(r) ? r : (r.items || r.data || []);
-    names = [...new Set(items.map(i => i.product_name || i.productName).filter(Boolean))].sort();
-  } catch {}
-
-  const options = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  const customers = Object.keys(PREFORMS_BY_CUSTOMER);
+  const firstCustomerPreforms = PREFORMS_BY_CUSTOMER[customers[0]] || [];
 
   openModal('New production run', `
     <div class="form-section">
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Preform / Product *</label>
-          <select id="fp-product" class="form-select" onchange="_fpProductChange()">
-            ${names.length ? '' : '<option value="">— No catalog found —</option>'}
-            ${options}
-            <option value="__custom__">+ Other (type a custom name)…</option>
+        <div class="form-group"><label class="form-label">Customer *</label>
+          <select id="fp-customer" class="form-select" onchange="_fpCustomerChange()">
+            ${customers.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+            <option value="__custom__">+ Other (custom product)…</option>
           </select>
         </div>
-        <div class="form-group"><label class="form-label">Machine</label><input id="fp-machine" class="form-input" placeholder="e.g. Machine #1"/></div>
+        <div class="form-group"><label class="form-label">Preform *</label>
+          <select id="fp-product" class="form-select">
+            ${firstCustomerPreforms.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}
+          </select>
+        </div>
       </div>
       <div class="form-group" id="fp-product-custom-wrap" style="display:none">
         <label class="form-label">Custom product name *</label>
         <input id="fp-product-custom" class="form-input" placeholder="e.g. 28mm Preform (Clear)"/>
       </div>
       <div class="form-row">
+        <div class="form-group"><label class="form-label">Machine *</label>
+          <select id="fp-machine" class="form-select">
+            ${PROD_MACHINES.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}
+          </select>
+        </div>
         <div class="form-group"><label class="form-label">Target quantity *</label><input id="fp-target" class="form-input" type="number" min="1" placeholder="e.g. 85000"/></div>
-        <div class="form-group"><label class="form-label">Operator</label><input id="fp-operator" class="form-input" placeholder="Name of operator"/></div>
       </div>
       <div class="form-group"><label class="form-label">Notes</label><textarea id="fp-notes" class="form-textarea" rows="2"></textarea></div>
       <div class="form-actions">
@@ -163,12 +204,16 @@ async function openAddProduction() {
 }
 
 async function submitAddProduction() {
-  const sel = $('#fp-product')?.value;
-  const product = sel === '__custom__' ? $('#fp-product-custom')?.value.trim() : (sel || '').trim();
+  const cust = $('#fp-customer')?.value;
+  const product = cust === '__custom__'
+    ? $('#fp-product-custom')?.value.trim()
+    : ($('#fp-product')?.value || '').trim();
+  const machine = $('#fp-machine')?.value;
   const target  = Number($('#fp-target')?.value);
-  if (!product || !target) { toast('Product and target qty are required', 'error'); return; }
+  if (!product) { toast('Please select or enter a preform', 'error'); return; }
+  if (!target)  { toast('Target quantity is required', 'error'); return; }
   try {
-    await API.production.create({ product, name: product, machine: $('#fp-machine')?.value.trim(), target_qty: target, operator: $('#fp-operator')?.value.trim(), notes: $('#fp-notes')?.value.trim(), status: 'active' });
+    await API.production.create({ product, name: product, machine, target_qty: target, notes: $('#fp-notes')?.value.trim(), status: 'active' });
     forceCloseModal(); toast('Production run started'); renderProduction();
   } catch (err) { toast(err.message, 'error'); }
 }
