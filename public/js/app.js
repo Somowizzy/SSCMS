@@ -65,7 +65,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     App.user = res.user || res;
     showApp();
     await refreshBadges();
-    goTo('dashboard');
+    goTo(landingPage());
     setInterval(refreshBadges, 60000); // refresh badges every 60s
   } catch {
     showLogin();
@@ -85,6 +85,21 @@ function canManage() {
 
 function isAdmin() {
   return ['hr_admin', 'system_admin'].includes(App.user?.role);
+}
+
+/* Which page to land on after sign-in.
+   Admins → Dashboard. Department members → their department page (once it
+   exists). Add new mappings here as each department dashboard is built. */
+function landingPage() {
+  if (isAdmin()) return 'dashboard';
+  const did = Number(App.user?.departmentId ?? App.user?.department_id);
+  const byDept = {
+    1: 'raw-materials',
+    // 2: 'production',        // build later
+    // 3: 'finished-goods',    // build later
+    // 4: 'shipping',          // build later
+  };
+  return byDept[did] || 'dashboard';
 }
 
 function showApp() {

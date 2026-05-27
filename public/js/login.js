@@ -23,7 +23,7 @@ async function doLogin() {
     App.user = res.user || res;
     showApp();
     await refreshBadges();
-    goTo('dashboard');
+    goTo(typeof landingPage === 'function' ? landingPage() : 'dashboard');
     // Load login stats
     loadLoginStats();
   } catch (err) {
