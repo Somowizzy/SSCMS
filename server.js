@@ -4,7 +4,7 @@ const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const path = require('path');
 const { initDatabase, closeDatabase } = require('./src/db/database');
-const { seedDatabase, seedPreformCatalog } = require('./src/db/seed');
+const { seedDatabase, seedPreformCatalog, seedRawMaterialsExtras } = require('./src/db/seed');
 
 // Import routes
 const authRoutes = require('./src/routes/auth');
@@ -79,6 +79,9 @@ async function start() {
     // Always ensure the real preform catalog exists (idempotent),
     // even if the database was already seeded on a previous run.
     seedPreformCatalog();
+    // Ensure raw-materials-specific rows (R-PET) exist for the
+    // Raw Materials Department dashboard.
+    seedRawMaterialsExtras();
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`\n  ╔══════════════════════════════════════════════╗`);
       console.log(`  ║   SSCMS - Smart Supply Chain Management     ║`);

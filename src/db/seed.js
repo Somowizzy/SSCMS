@@ -275,4 +275,39 @@ function seedPreformCatalog() {
   else console.log('  ✓ Preform catalog already present');
 }
 
-module.exports = { seedDatabase, seedPreformCatalog };
+/**
+ * Ensure raw-materials-specific rows exist (R-PET recycled stock).
+ * Idempotent — safe on every startup. Used by the Raw Materials
+ * Department dashboard so the R-PET banner and "Log R-PET batch"
+ * flow have a real inventory row to operate on.
+ */
+function seedRawMaterialsExtras() {
+  const db = getDb();
+
+  const findProductByName = db.prepare('SELECT id FROM products WHERE name = ?');
+  const findInvByProduct  = db.prepare('SELECT id FROM inventory WHERE product_id = ?');
+  const insertProduct = db.prepare(`
+    INSERT INTO products (name, description, category, unit, unit_price, reorder_level)
+    VALUES (?, ?, 'raw_material', 'kg', ?, ?)
+  `);
+  const insertInv = db.prepare(`
+    INSERT INTO inventory (product_id, quantity_on_hand, batch_no, location)
+    VALUES (?, ?, ?, 'Warehouse B')
+  `);
+
+  // R-PET (Recycled PET flakes) — output of the in-house grinding loop.
+  const RPET_NAME = 'R-PET (Recycled PET flakes)';
+  const RPET_DESC = 'Ground recycled PET flakes from production rejections';
+  let p = findProductByName.get(RPET_NAME);
+  if (!p) {
+    const result = insertProduct.run(RPET_NAME, RPET_DESC, 480.00, 200);
+    insertInv.run(result.lastInsertRowid, 1250, 'RPET-INIT-001');
+    console.log('  ✓ Seeded R-PET raw material');
+  } else if (!findInvByProduct.get(p.id)) {
+    // Product existed without an inventory row — create the inventory row only
+    insertInv.run(p.id, 1250, 'RPET-INIT-001');
+    console.log('  ✓ Created inventory row for existing R-PET product');
+  }
+}
+
+module.exports = { seedDatabase, seedPreformCatalog, seedRawMaterialsExtras };
