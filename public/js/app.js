@@ -4,6 +4,7 @@ const App = {
   page: null,
   CTA: {
     dashboard:      { label:'New Request',    icon:'ti-plus' },
+    'raw-materials':{ label:'Log Receiving',  icon:'ti-arrow-down-left' },
     inventory:      { label:'Add Material',   icon:'ti-plus' },
     production:     { label:'New Run',        icon:'ti-plus' },
     'finished-goods':{ label:'Add FG',        icon:'ti-plus' },
@@ -16,7 +17,7 @@ const App = {
     audit:          { label:'Refresh',        icon:'ti-refresh' },
   },
   TITLES: {
-    dashboard:'Dashboard', inventory:'Stock & Inventory',
+    dashboard:'Dashboard', 'raw-materials':'Raw Materials Department', inventory:'Stock & Inventory',
     production:'Production Management', 'finished-goods':'Finished Goods',
     shipping:'Shipping & Dispatch', requests:'Orders & Requests',
     notifications:'Alerts & Notifications', users:'User Management',
@@ -29,6 +30,7 @@ const App = {
 // (the render* functions are defined in scripts loaded after this file)
 const Pages = {
   dashboard:       () => renderDashboard(),
+  'raw-materials': () => renderRawMaterials(),
   inventory:       () => renderInventory(),
   production:      () => renderProduction(),
   'finished-goods':() => renderFinishedGoods(),
@@ -98,7 +100,11 @@ function showApp() {
   setText('#user-avatar', initials(name));
   // admin nav
   $$('.sb-admin').forEach(e => e.style.display = isAdmin() ? '' : 'none');
-  // hide CTA for view-only dept_user
+  // Raw Materials nav — only visible to admins and members of dept 1
+  const userDeptId = Number(App.user?.departmentId ?? App.user?.department_id);
+  const showRM = isAdmin() || userDeptId === 1;
+  $$('.sb-rawmat').forEach(e => e.style.display = showRM ? '' : 'none');
+  // hide CTA for view-only dept_user (except Raw Materials user, who can still log receiving)
   const ctaBtn = $('#cta-btn');
   if (ctaBtn) ctaBtn.style.display = canManage() ? '' : 'none';
 }
@@ -117,6 +123,10 @@ function goTo(page) {
   const cta = App.CTA[page] || { label:'New', icon:'ti-plus' };
   setText('#cta-label', cta.label);
   $('#cta-icon').className = `ti ${cta.icon}`;
+  // CTA visibility: hidden for view-only dept_user, but always shown on Raw Materials
+  // (Log Receiving is a permitted action for dept_user in that department).
+  const ctaBtn = $('#cta-btn');
+  if (ctaBtn) ctaBtn.style.display = (canManage() || page === 'raw-materials') ? '' : 'none';
 
   // clear search
   const si = $('#search-input');
@@ -136,6 +146,7 @@ function goTo(page) {
 function pageCTA() {
   const handlers = {
     dashboard:        () => goTo('requests'),
+    'raw-materials':  () => typeof openRMReceiving     === 'function' && openRMReceiving(),
     inventory:        () => typeof openAddInventory    === 'function' && openAddInventory(),
     production:       () => typeof openAddProduction   === 'function' && openAddProduction(),
     'finished-goods': () => typeof openAddFG           === 'function' && openAddFG(),
