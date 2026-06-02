@@ -410,12 +410,13 @@ async function renderAudit() {
   setHTML('#page-content', loading());
   try {
     // Non-admin dept members only see entries authored by users in their own
-    // department. Admins see everything.
+    // department. Admins and HR & Administration (dept 5) see everything.
     const did = Number(App.user?.departmentId ?? App.user?.department_id);
-    const q = (!isAdmin() && did) ? `?departmentId=${did}` : '';
+    const seesAll = isAdmin() || did === 5;
+    const q = (!seesAll && did) ? `?departmentId=${did}` : '';
     const res  = await API.audit.list(q);
     const logs = Array.isArray(res) ? res : (res.logs || res.data || res.items || []);
-    const scopeNote = (!isAdmin() && did)
+    const scopeNote = (!seesAll && did)
       ? `<span style="color:var(--txt2);font-weight:400;font-size:11px;margin-left:6px">&middot; scoped to your department</span>`
       : '';
     setHTML('#page-content', `

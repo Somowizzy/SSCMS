@@ -121,10 +121,10 @@ function applyDeptVisibility() {
   const nav = $('#sidebar-nav');
   if (!nav) return;
 
-  // Admins see everything except items they're explicitly opted out of (no-op here)
-  if (isAdmin()) return;
-
+  // Admins and HR & Administration (dept 5) see every nav item.
   const did = Number(App.user?.departmentId ?? App.user?.department_id);
+  if (isAdmin() || did === 5) return;
+
   const allowed = NAV_VISIBILITY_BY_DEPT[did];
   if (!allowed) return; // unknown dept → leave default visibility
   const visible = new Set(allowed);
@@ -165,11 +165,14 @@ function showApp() {
   setText('#user-name', name);
   setText('#user-role', role);
   setText('#user-avatar', initials(name));
-  // admin nav
-  $$('.sb-admin').forEach(e => e.style.display = isAdmin() ? '' : 'none');
-  // Raw Materials nav — only visible to admins and members of dept 1
+  // HR & Administration personnel (dept 5) see the full interface, same as
+  // hr_admin / system_admin roles. Other dept members get a scoped view.
   const userDeptId = Number(App.user?.departmentId ?? App.user?.department_id);
-  const showRM = isAdmin() || userDeptId === 1;
+  const seesAll = isAdmin() || userDeptId === 5;
+  // admin nav (Users, Departments)
+  $$('.sb-admin').forEach(e => e.style.display = seesAll ? '' : 'none');
+  // Raw Materials nav
+  const showRM = seesAll || userDeptId === 1;
   $$('.sb-rawmat').forEach(e => e.style.display = showRM ? '' : 'none');
   // Apply department-scoped sidebar visibility (hides items not in this
   // department's allow-list, and collapses empty section labels).

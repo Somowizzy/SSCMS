@@ -24,7 +24,7 @@ async function renderDashboard() {
       <!-- Greeting -->
       <div class="flex-between" style="flex-wrap:wrap;gap:8px">
         <div style="font-size:14px;color:var(--txt2)">
-          Good ${greeting()}, <strong style="color:var(--txt)">${esc(App.user?.name || 'Admin')}</strong>
+          Good ${greeting()}, <strong style="color:var(--txt)">${esc(App.user?.firstName || App.user?.first_name || App.user?.name || 'there')}</strong>
           &mdash; ${new Date().toLocaleDateString('en-NG',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
         </div>
         <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--purple)">
