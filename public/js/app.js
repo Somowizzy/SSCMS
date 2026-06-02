@@ -95,11 +95,63 @@ function landingPage() {
   const did = Number(App.user?.departmentId ?? App.user?.department_id);
   const byDept = {
     1: 'raw-materials',
-    // 2: 'production',        // build later
-    // 3: 'finished-goods',    // build later
-    // 4: 'shipping',          // build later
+    // 2: 'production-dept',   // build later
+    // 3: 'fg-dept',           // build later
+    // 4: 'shipping-dept',     // build later
   };
   return byDept[did] || 'dashboard';
+}
+
+/* Sidebar visibility per department.
+   Each entry lists the pages a member of that department should see in
+   the sidebar. Admins always see everything. */
+const NAV_VISIBILITY_BY_DEPT = {
+  // Raw Materials: Dashboard, Raw Materials, Stock & Inventory, Alerts, Audit Log.
+  // Hidden: Analytics, Production, Orders & Requests, Finished Goods, Shipping.
+  1: ['dashboard', 'raw-materials', 'inventory', 'notifications', 'audit'],
+  // Production: Dashboard, Production, Orders & Requests, Alerts, Audit Log.
+  // Hidden: Analytics, Finished Goods, Raw Materials, Stock & Inventory, Shipping.
+  2: ['dashboard', 'production', 'requests', 'notifications', 'audit'],
+  // 3 (Finished Goods), 4 (Shipping), 5 (HR & Admin) — add when built
+};
+
+/* Apply department-scoped sidebar visibility. Hides items not in the user's
+   department list and collapses section labels that end up empty. */
+function applyDeptVisibility() {
+  const nav = $('#sidebar-nav');
+  if (!nav) return;
+
+  // Admins see everything except items they're explicitly opted out of (no-op here)
+  if (isAdmin()) return;
+
+  const did = Number(App.user?.departmentId ?? App.user?.department_id);
+  const allowed = NAV_VISIBILITY_BY_DEPT[did];
+  if (!allowed) return; // unknown dept → leave default visibility
+  const visible = new Set(allowed);
+
+  // Hide individual nav items not in the visible set (skip admin-gated rows)
+  $$('#sidebar-nav .sb-item').forEach(item => {
+    if (item.classList.contains('sb-admin')) return; // already handled
+    const page = item.dataset.page;
+    if (page && !visible.has(page)) item.style.display = 'none';
+  });
+
+  // Hide section labels with no visible items beneath them
+  const children = Array.from(nav.children);
+  for (let i = 0; i < children.length; i++) {
+    const el = children[i];
+    if (!el.classList.contains('sb-lbl')) continue;
+    if (el.classList.contains('sb-admin')) continue;
+    let anyVisible = false;
+    for (let j = i + 1; j < children.length; j++) {
+      const next = children[j];
+      if (next.classList.contains('sb-lbl')) break;
+      if (next.classList.contains('sb-item') && next.style.display !== 'none') {
+        anyVisible = true; break;
+      }
+    }
+    if (!anyVisible) el.style.display = 'none';
+  }
 }
 
 function showApp() {
@@ -119,6 +171,9 @@ function showApp() {
   const userDeptId = Number(App.user?.departmentId ?? App.user?.department_id);
   const showRM = isAdmin() || userDeptId === 1;
   $$('.sb-rawmat').forEach(e => e.style.display = showRM ? '' : 'none');
+  // Apply department-scoped sidebar visibility (hides items not in this
+  // department's allow-list, and collapses empty section labels).
+  applyDeptVisibility();
   // hide CTA for view-only dept_user (except Raw Materials user, who can still log receiving)
   const ctaBtn = $('#cta-btn');
   if (ctaBtn) ctaBtn.style.display = canManage() ? '' : 'none';
