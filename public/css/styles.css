@@ -452,6 +452,75 @@ html, body { height: 100%; background: var(--bg); color: var(--txt); font-family
   border-radius: 8px; font-weight: 700;
 }
 
+/* ── AI Forecast page ─────────────────────────── */
+.ai-banner {
+  background: linear-gradient(135deg, rgba(99,102,241,.15), rgba(167,139,250,.1));
+  border: 1px solid rgba(167,139,250,.25); border-radius: 14px;
+  padding: 18px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.ai-banner-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: rgba(167,139,250,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; flex-shrink: 0;
+}
+.ai-banner-title { font-size: 14px; font-weight: 700; color: var(--txt); margin-bottom: 4px; }
+.ai-banner-sub   { font-size: 12px; color: var(--txt2); line-height: 1.6; }
+.ai-banner-meta  { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.ai-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(167,139,250,.12);
+  border: 1px solid rgba(167,139,250,.2);
+  border-radius: 6px; padding: 3px 10px;
+  font-size: 10.5px; color: var(--purple);
+}
+.ai-accuracy { text-align: right; flex-shrink: 0; }
+.ai-acc-val  { font-family: 'Space Grotesk',sans-serif; font-size: 28px; font-weight: 800; color: var(--purple); letter-spacing: -1px; line-height: 1; }
+.ai-acc-lbl  { font-size: 10px; color: var(--txt2); margin-top: 2px; }
+
+.forecast-stat { padding: 16px; text-align: center; }
+.fs-val { font-family: 'Space Grotesk',sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+.fs-lbl { font-size: 11px; color: var(--txt2); margin-top: 5px; }
+.fs-trend {
+  font-size: 11px; font-weight: 600; margin-top: 8px;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 6px;
+}
+.fs-trend.up      { background: rgba(239,68,68,.1);  color: #f87171; }
+.fs-trend.good    { background: rgba(34,197,94,.1);  color: var(--green); }
+.fs-trend.neutral { background: rgba(245,158,11,.1); color: var(--amber); }
+
+.reorder-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .12s;
+}
+.reorder-item:last-child { border-bottom: none; }
+.reorder-item:hover { background: rgba(255,255,255,.02); }
+.ri-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; color: var(--txt); }
+.ri-info { flex: 1; }
+.ri-name { font-size: 12px; font-weight: 600; color: var(--txt); }
+.ri-sub  { font-size: 10.5px; color: var(--txt2); margin-top: 2px; }
+.ri-action {
+  background: var(--purple); border: none; border-radius: 6px;
+  padding: 5px 10px; font-size: 10.5px; font-weight: 600;
+  color: #fff; cursor: pointer; font-family: inherit;
+}
+.ri-action:hover { filter: brightness(1.1); }
+
+.insight-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 13px;
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.insight-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0;
+}
+.i-title { font-size: 12px; font-weight: 600; color: var(--txt); margin-bottom: 3px; }
+.i-sub   { font-size: 11px; color: var(--txt2); line-height: 1.5; }
+
 /* ── Schedule (Gantt) ────────────────────────────── */
 .week-nav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .sched-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 6px 4px; }
