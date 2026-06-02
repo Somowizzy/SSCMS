@@ -124,7 +124,7 @@ function buildProdPage(runs, rep) {
     <div class="two-col">
       <div class="card">
         <div class="card-hd">
-          <div class="card-hd-title">Active production runs <span style="color:var(--txt2);font-weight:400;font-size:12px;margin-left:6px">${runs.length} total</span></div>
+          <div class="card-hd-title">Active production runs <span style="color:var(--txt2);font-weight:400;font-size:12px;margin-left:6px">${runs.filter(r => (r.status || '').toLowerCase() !== 'cancelled').length} active</span></div>
           <div class="card-hd-act" onclick="openAddProduction()"><i class="ti ti-plus"></i> New run</div>
         </div>
         <div id="prod-table"></div>
@@ -240,6 +240,9 @@ function _shiftRow(time, label, ops, cls) {
 }
 
 function renderProdTable(runs) {
+  // Hide cancelled runs from the Active production runs table so soft-deleted
+  // jobs don't appear (delete API sets status='cancelled' rather than removing).
+  runs = runs.filter(r => (r.status || '').toLowerCase() !== 'cancelled');
   if (!runs.length) { setHTML('#prod-table', empty('No production runs yet', 'ti-settings-2')); return; }
   setHTML('#prod-table', `
     <div class="tbl-wrap">
