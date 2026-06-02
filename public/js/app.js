@@ -6,6 +6,7 @@ const App = {
     dashboard:      { label:'New Request',    icon:'ti-plus' },
     'raw-materials':{ label:'Log Receiving',  icon:'ti-arrow-down-left' },
     inventory:      { label:'Add Material',   icon:'ti-plus' },
+    schedule:       { label:'This Week',      icon:'ti-calendar' },
     production:     { label:'New Run',        icon:'ti-plus' },
     'finished-goods':{ label:'Add FG',        icon:'ti-plus' },
     shipping:       { label:'New Shipment',   icon:'ti-truck' },
@@ -18,6 +19,7 @@ const App = {
   },
   TITLES: {
     dashboard:'Dashboard', 'raw-materials':'Raw Materials Department', inventory:'Stock & Inventory',
+    schedule:'Production Schedule',
     production:'Production Management', 'finished-goods':'Finished Goods',
     shipping:'Shipping & Dispatch', requests:'Orders & Requests',
     notifications:'Alerts & Notifications', users:'User Management',
@@ -32,6 +34,7 @@ const Pages = {
   dashboard:       () => renderDashboard(),
   'raw-materials': () => renderRawMaterials(),
   inventory:       () => renderInventory(),
+  schedule:        () => renderSchedule(),
   production:      () => renderProduction(),
   'finished-goods':() => renderFinishedGoods(),
   shipping:        () => renderShipping(),
@@ -174,6 +177,8 @@ function showApp() {
   // Raw Materials nav
   const showRM = seesAll || userDeptId === 1;
   $$('.sb-rawmat').forEach(e => e.style.display = showRM ? '' : 'none');
+  // HR / admin-only items (Schedule, Suppliers, AI Forecast, Settings…)
+  $$('.sb-hronly').forEach(e => e.style.display = seesAll ? '' : 'none');
   // Apply department-scoped sidebar visibility (hides items not in this
   // department's allow-list, and collapses empty section labels).
   applyDeptVisibility();
@@ -221,6 +226,7 @@ function pageCTA() {
     dashboard:        () => goTo('requests'),
     'raw-materials':  () => typeof openRMReceiving     === 'function' && openRMReceiving(),
     inventory:        () => typeof openAddInventory    === 'function' && openAddInventory(),
+    schedule:         () => typeof schThisWeek         === 'function' && schThisWeek(),
     production:       () => typeof openAddProduction   === 'function' && openAddProduction(),
     'finished-goods': () => typeof openAddFG           === 'function' && openAddFG(),
     shipping:         () => typeof openAddShipping     === 'function' && openAddShipping(),

@@ -452,6 +452,64 @@ html, body { height: 100%; background: var(--bg); color: var(--txt); font-family
   border-radius: 8px; font-weight: 700;
 }
 
+/* ── Schedule (Gantt) ────────────────────────────── */
+.week-nav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sched-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 6px 4px; }
+.leg     { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--txt2); }
+.leg-bar { width: 18px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+.gantt-header {
+  display: flex; border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,.01);
+}
+.gantt-label-col {
+  width: 160px; flex-shrink: 0; padding: 10px 14px;
+  font-size: 10.5px; font-weight: 700; color: var(--txt2);
+  letter-spacing: .05em; text-transform: uppercase;
+  border-right: 1px solid var(--border);
+}
+.gantt-days { flex: 1; display: grid; grid-template-columns: repeat(7,1fr); }
+.gantt-day {
+  padding: 8px 4px; text-align: center;
+  border-right: 1px solid var(--border); font-size: 11px;
+}
+.gantt-day:last-child { border-right: none; }
+.gantt-day-name { color: var(--txt2); font-weight: 600; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; }
+.gantt-day-num  { font-family: 'Space Grotesk',sans-serif; font-size: 14px; font-weight: 700; color: var(--txt); margin-top: 2px; }
+.gantt-day.today .gantt-day-num {
+  background: var(--blue); border-radius: 50%;
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 2px auto 0; color: #fff;
+}
+
+.gantt-section-hd {
+  padding: 8px 14px; font-size: 10.5px; font-weight: 700;
+  color: var(--txt2); letter-spacing: .04em; text-transform: uppercase;
+  background: rgba(255,255,255,.015); border-bottom: 1px solid var(--border);
+}
+.gantt-row {
+  display: flex; border-bottom: 1px solid var(--border); min-height: 52px;
+}
+.gantt-row:last-child { border-bottom: none; }
+.gantt-row:hover { background: rgba(255,255,255,.012); }
+.gantt-row-label {
+  width: 160px; flex-shrink: 0; padding: 8px 14px;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; justify-content: center;
+}
+.g-machine { font-size: 12px; font-weight: 600; color: var(--txt); }
+.g-product { font-size: 10.5px; color: var(--txt2); margin-top: 2px; }
+.gantt-cells {
+  flex: 1; display: grid; grid-template-columns: repeat(7,1fr); position: relative;
+}
+.gantt-cell {
+  border-right: 1px solid var(--border); position: relative; min-height: 52px;
+}
+.gantt-cell:last-child  { border-right: none; }
+.gantt-cell.today-col   { background: rgba(59,130,246,.04); }
+.g-bar:hover { filter: brightness(1.15); }
+
 /* Orders page filter pills */
 .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .filter-btn {
