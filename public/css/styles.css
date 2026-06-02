@@ -452,6 +452,22 @@ html, body { height: 100%; background: var(--bg); color: var(--txt); font-family
   border-radius: 8px; font-weight: 700;
 }
 
+/* ── Settings ───────────────────────────────────── */
+.setting-input, .setting-select {
+  width: 100%; background: var(--bg4);
+  border: 1px solid var(--border2); border-radius: 8px;
+  padding: 9px 12px; font-size: 13px; color: var(--txt);
+  font-family: inherit; outline: none;
+}
+.setting-input:focus, .setting-select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+}
+.settings-nav-item:hover {
+  background: rgba(255,255,255,.04);
+  color: var(--txt);
+}
+
 /* ── AI Forecast page ─────────────────────────── */
 .ai-banner {
   background: linear-gradient(135deg, rgba(99,102,241,.15), rgba(167,139,250,.1));
