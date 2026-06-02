@@ -56,12 +56,15 @@ router.get('/suppliers', authenticate, (req, res) => {
 });
 
 // POST /api/inventory/suppliers
-router.post('/suppliers', authenticate, authorize('hr_admin', 'dept_head'), (req, res) => {
+router.post('/suppliers', authenticate, authorize('hr_admin', 'dept_head', 'system_admin'), (req, res) => {
   try {
     const { name, contactPerson, email, phone, address } = req.body;
+    if (!name) return res.status(400).json({ error: 'Supplier name is required' });
     const db = getDb();
+    // Coalesce optional fields — sql.js cannot bind undefined and will crash
+    // the prepared statement, so default everything to '' or null.
     const result = db.prepare('INSERT INTO suppliers (name, contact_person, email, phone, address) VALUES (?, ?, ?, ?, ?)')
-      .run(name, contactPerson, email, phone, address);
+      .run(name, contactPerson || '', email || '', phone || '', address || '');
     logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Supplier added', 'inventory', `Added supplier: ${name}`);
     res.status(201).json({ id: result.lastInsertRowid, message: 'Supplier added' });
   } catch (err) {
