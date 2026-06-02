@@ -252,9 +252,12 @@ function openSupplierModal(id) {
         <div class="form-group"><label class="form-label">Phone</label><input id="sup-phone" class="form-input" placeholder="+234-..." value="${esc(s?.phone || '')}"/></div>
       </div>
       <div class="form-group"><label class="form-label">Address</label><textarea id="sup-address" class="form-textarea" rows="2" placeholder="City, country">${esc(s?.address || '')}</textarea></div>
-      <div class="form-actions">
-        <button class="sec-btn" onclick="forceCloseModal()">Cancel</button>
-        <button class="primary-btn" onclick="submitSupplier(${id || 'null'})"><i class="ti ${editing ? 'ti-check' : 'ti-plus'}"></i> ${editing ? 'Save' : 'Add supplier'}</button>
+      <div class="form-actions" style="display:flex;gap:8px;justify-content:${editing ? 'space-between' : 'flex-end'}">
+        ${editing ? `<button class="danger-btn" onclick="deleteSupplier(${id}, '${esc(s?.name || '')}')"><i class="ti ti-power"></i> Deactivate</button>` : ''}
+        <div style="display:flex;gap:8px">
+          <button class="sec-btn" onclick="forceCloseModal()">Cancel</button>
+          <button class="primary-btn" onclick="submitSupplier(${id || 'null'})"><i class="ti ${editing ? 'ti-check' : 'ti-plus'}"></i> ${editing ? 'Save' : 'Add supplier'}</button>
+        </div>
       </div>
     </div>
   `);
@@ -271,14 +274,10 @@ async function submitSupplier(id) {
     address:       $('#sup-address')?.value.trim(),
   };
   try {
-    if (id) {
-      // No PATCH endpoint exists yet — fall back to creating a new entry and
-      // surface a soft warning. Hooking up a real edit endpoint is a later
-      // backend task.
-      toast('Editing supplier is read-only for now — saved as new entry.', 'info');
-    }
-    const res = await fetch('/api/inventory/suppliers', {
-      method: 'POST', credentials: 'include',
+    const url = id ? `/api/inventory/suppliers/${id}` : '/api/inventory/suppliers';
+    const method = id ? 'PATCH' : 'POST';
+    const res = await fetch(url, {
+      method, credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
@@ -288,4 +287,17 @@ async function submitSupplier(id) {
     toast(id ? 'Supplier saved' : 'Supplier added', 'success');
     renderSuppliers();
   } catch (err) { toast(err.message, 'error'); }
+}
+
+function deleteSupplier(id, name) {
+  confirm(`Deactivate supplier <strong>${esc(name)}</strong>? They will no longer appear in the active directory.`, async () => {
+    try {
+      const res = await fetch(`/api/inventory/suppliers/${id}`, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      toast('Supplier deactivated', 'success');
+      forceCloseModal();
+      renderSuppliers();
+    } catch (err) { toast(err.message, 'error'); }
+  });
 }

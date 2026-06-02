@@ -18,6 +18,7 @@ const shippingRoutes = require('./src/routes/shipping');
 const reportRoutes = require('./src/routes/reports');
 const auditRoutes = require('./src/routes/audit');
 const notificationRoutes = require('./src/routes/notifications');
+const settingsRoutes = require('./src/routes/settings');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -54,6 +55,7 @@ app.use('/api/shipping', shippingRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Return JSON 404 for undefined API routes (prevents HTML being returned for missing endpoints)
 app.use('/api/*', (req, res) => {

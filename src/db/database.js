@@ -374,6 +374,15 @@ async function initDatabaseAsync() {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
+    -- App-wide settings (single row id=1 holds JSON blob)
+    CREATE TABLE IF NOT EXISTS settings (
+      id INTEGER PRIMARY KEY,
+      data TEXT NOT NULL DEFAULT '{}',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_by INTEGER,
+      FOREIGN KEY (updated_by) REFERENCES users(id)
+    );
+
     -- Stock Movement History (for AI forecasting)
     CREATE TABLE IF NOT EXISTS stock_movements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

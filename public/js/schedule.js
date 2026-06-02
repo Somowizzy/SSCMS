@@ -26,8 +26,23 @@ const _SCH_PRODUCT_COLORS = [
   { match: /38mm.*cap|cap.*38mm/i,         label: '38mm Cap',     cls: 'am', bg: 'rgba(245,158,11,.65)' },
 ];
 
+// Customer-named preforms → the underlying 28mm/29mm/30mm spec they belong
+// to, so the Gantt bar paints the right colour even when the catalog name
+// doesn't include the neck size literally (e.g. "Maltina Preform (Amber)").
+const _SCH_PRODUCT_ALIAS = [
+  { match: /maltina|amstel\s*malta|fayrouz|coke|fanta|sprite|schweppes|predator|bigi\s*cola|bigi.*apple|bigi.*orange|bigi.*tropical|fearless/i, color: '28mm Preform' },
+  { match: /pure\s*life/i,                            color: '30mm Preform' },
+  { match: /eva\s*water|bigi\s*premium.*water/i,      color: '29mm Preform' },
+];
+
 function _schProductColor(name) {
   for (const p of _SCH_PRODUCT_COLORS) if (p.match.test(name || '')) return p;
+  for (const a of _SCH_PRODUCT_ALIAS) {
+    if (a.match.test(name || '')) {
+      const found = _SCH_PRODUCT_COLORS.find(p => p.label === a.color);
+      if (found) return found;
+    }
+  }
   return { label: 'Other', cls: 'gr', bg: 'rgba(122,133,153,.45)' };
 }
 

@@ -72,6 +72,42 @@ router.post('/suppliers', authenticate, authorize('hr_admin', 'dept_head', 'syst
   }
 });
 
+// PATCH /api/inventory/suppliers/:id — update supplier fields
+router.patch('/suppliers/:id', authenticate, authorize('hr_admin', 'system_admin', 'dept_head'), (req, res) => {
+  try {
+    const { name, contactPerson, email, phone, address, status } = req.body;
+    const db = getDb();
+    const existing = db.prepare('SELECT * FROM suppliers WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Supplier not found' });
+    const updates = [];
+    const values = [];
+    if (name           !== undefined) { updates.push('name = ?');           values.push(name); }
+    if (contactPerson  !== undefined) { updates.push('contact_person = ?'); values.push(contactPerson || ''); }
+    if (email          !== undefined) { updates.push('email = ?');          values.push(email || ''); }
+    if (phone          !== undefined) { updates.push('phone = ?');          values.push(phone || ''); }
+    if (address        !== undefined) { updates.push('address = ?');        values.push(address || ''); }
+    if (status         !== undefined) { updates.push('status = ?');         values.push(status); }
+    if (!updates.length) return res.status(400).json({ error: 'No updatable fields supplied' });
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(req.params.id);
+    db.prepare(`UPDATE suppliers SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Supplier updated', 'inventory', `Updated supplier #${req.params.id}`);
+    res.json({ message: 'Supplier updated' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/inventory/suppliers/:id — soft-deactivate the supplier (status='inactive')
+router.delete('/suppliers/:id', authenticate, authorize('hr_admin', 'system_admin', 'dept_head'), (req, res) => {
+  try {
+    const db = getDb();
+    const existing = db.prepare('SELECT * FROM suppliers WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Supplier not found' });
+    db.prepare("UPDATE suppliers SET status = 'inactive', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(req.params.id);
+    logAudit(req.user.id, `${req.user.first_name} ${req.user.last_name}`, 'Supplier deactivated', 'inventory', `Deactivated supplier ${existing.name}`);
+    res.json({ message: 'Supplier deactivated' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // POST /api/inventory - Add new product with inventory
 router.post('/', authenticate, authorize('hr_admin', 'dept_head', 'dept_user'), (req, res) => {
   try {

@@ -42,17 +42,30 @@ const _SETTINGS_DEFAULTS = {
   theme: localStorage.getItem('sscms-theme') || 'dark',
 };
 
-function _settingsLoad() {
+async function _settingsLoadRemote() {
+  try {
+    const res = await API.settings.get();
+    return _settingsDeepMerge(JSON.parse(JSON.stringify(_SETTINGS_DEFAULTS)), res.settings || {});
+  } catch (err) {
+    // Fall back to localStorage so the page still works offline / when
+    // the user lacks permission to read settings.
+    return _settingsLoadLocal();
+  }
+}
+
+function _settingsLoadLocal() {
   try {
     const raw = localStorage.getItem(_SETTINGS_KEY);
     if (!raw) return JSON.parse(JSON.stringify(_SETTINGS_DEFAULTS));
     const parsed = JSON.parse(raw);
-    // Merge with defaults so newly added keys still appear
     return _settingsDeepMerge(JSON.parse(JSON.stringify(_SETTINGS_DEFAULTS)), parsed);
   } catch {
     return JSON.parse(JSON.stringify(_SETTINGS_DEFAULTS));
   }
 }
+
+// Backward-compat: previous name used by other helpers
+function _settingsLoad() { return _settingsLoadLocal(); }
 
 function _settingsDeepMerge(base, override) {
   for (const k in override) {
@@ -63,15 +76,29 @@ function _settingsDeepMerge(base, override) {
   return base;
 }
 
-function _settingsSave(s) {
-  localStorage.setItem(_SETTINGS_KEY, JSON.stringify(s));
+async function _settingsSaveRemote(partial) {
+  // Persist partial diff to the backend; the server deep-merges. Always also
+  // cache locally so reloads work even if the server is briefly unavailable.
+  try {
+    const res = await API.settings.patch(partial);
+    _settings = res.settings || _settingsDeepMerge(_settings, partial);
+    localStorage.setItem(_SETTINGS_KEY, JSON.stringify(_settings));
+    return true;
+  } catch (err) {
+    // Fall back to local-only persistence
+    _settings = _settingsDeepMerge(_settings, partial);
+    localStorage.setItem(_SETTINGS_KEY, JSON.stringify(_settings));
+    if (toast) toast('Saved locally — backend unreachable', 'warning');
+    return false;
+  }
 }
 
-let _settings = _settingsLoad();
+let _settings = _settingsLoadLocal();
 let _settingsSection = 'company';
 
 async function renderSettings() {
-  _settings = _settingsLoad();
+  setHTML('#page-content', loading());
+  _settings = await _settingsLoadRemote();
   setHTML('#page-content', `
     <div class="settings-shell" style="display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:flex-start">
       <!-- Left nav -->
@@ -240,7 +267,7 @@ function _settingsToggle(group, key, el) {
   el.classList.toggle('on', _settings[group][key]);
 }
 
-function settingsSaveSection(section) {
+async function settingsSaveSection(section) {
   // Sync inputs/selects back into the state before persisting
   if (section === 'company') {
     _settings.company.name     = $('#s-co-name')?.value     ?? _settings.company.name;
@@ -254,12 +281,27 @@ function settingsSaveSection(section) {
     const h = $('#s-ai-horizon')?.value || '6 weeks';
     _settings.ai.horizonWeeks = parseInt(h, 10) || 6;
   }
-  _settingsSave(_settings);
-  toast(`Saved ${section} settings`, 'success');
+  const partial = { [section]: _settings[section] };
+  const ok = await _settingsSaveRemote(partial);
+  if (ok) toast(`Saved ${section} settings`, 'success');
 }
 
-function settingsSaveAll() {
-  ['company', 'security', 'ai'].forEach(s => settingsSaveSection(s));
-  _settingsSave(_settings);
-  toast('All settings saved', 'success');
+async function settingsSaveAll() {
+  // Sync everything from DOM first
+  for (const s of ['company', 'security', 'ai']) {
+    if (s === 'company') {
+      _settings.company.name     = $('#s-co-name')?.value     ?? _settings.company.name;
+      _settings.company.industry = $('#s-co-industry')?.value ?? _settings.company.industry;
+      _settings.company.timezone = $('#s-co-tz')?.value       ?? _settings.company.timezone;
+      _settings.company.currency = $('#s-co-cur')?.value      ?? _settings.company.currency;
+    } else if (s === 'security') {
+      _settings.security.sessionTimeout = $('#s-sec-session')?.value ?? _settings.security.sessionTimeout;
+      _settings.security.auditRetention = $('#s-sec-audit')?.value   ?? _settings.security.auditRetention;
+    } else if (s === 'ai') {
+      const h = $('#s-ai-horizon')?.value || '6 weeks';
+      _settings.ai.horizonWeeks = parseInt(h, 10) || 6;
+    }
+  }
+  const ok = await _settingsSaveRemote(_settings);
+  if (ok) toast('All settings saved', 'success');
 }

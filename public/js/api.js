@@ -91,6 +91,10 @@ const API = (() => {
     audit: {
       list: (q = '')      => get(`/api/audit${q}`),
     },
+    settings: {
+      get:    ()    => get('/api/settings'),
+      patch:  (d)   => patch('/api/settings', d),
+    },
     notifications: {
       list:       ()      => get('/api/notifications'),
       unread:     ()      => get('/api/notifications/unread'),
