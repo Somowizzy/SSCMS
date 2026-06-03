@@ -238,10 +238,19 @@ function goTo(page) {
   if (!Pages[page]) page = 'dashboard';
   // Route guard: non-admin dept members can only navigate to pages in
   // their allow-list. Anything else bounces back to their dept landing.
+  // Default-deny if there's no user / unknown dept so a logged-out call
+  // can't accidentally render dept pages.
   if (!isAdmin()) {
     const did = Number(App.user?.departmentId ?? App.user?.department_id);
+    if (!App.user) {
+      // No session — let the boot flow handle the login redirect.
+      return;
+    }
     const allowed = NAV_VISIBILITY_BY_DEPT[did];
     if (allowed && did !== 5 && !allowed.includes(page)) {
+      page = landingPage();
+    } else if (!allowed && did !== 5) {
+      // Unknown dept and not HR/admin → bounce to landing (likely a stale token)
       page = landingPage();
     }
   }
