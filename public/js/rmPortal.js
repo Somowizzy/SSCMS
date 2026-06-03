@@ -79,14 +79,15 @@ async function renderRmDash() {
     });
     const zoneEntries = Object.entries(zoneMap).sort();
 
-    const greeting = (typeof greeting === 'function' ? greeting() : (new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'));
+    const h = new Date().getHours();
+    const period = (typeof greeting === 'function' ? greeting() : (h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'));
     const firstName = App.user?.firstName || App.user?.first_name || App.user?.name || 'there';
     const dateStr = new Date().toLocaleDateString('en-NG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     setHTML('#page-content', `
       <!-- Greeting -->
       <div style="font-size:14px;color:var(--txt2);margin-bottom:2px">
-        Good ${greeting}, <strong style="color:var(--txt)">${esc(firstName)}</strong> &mdash; ${dateStr}
+        Good ${period}, <strong style="color:var(--txt)">${esc(firstName)}</strong> &mdash; ${dateStr}
       </div>
 
       <!-- 4 KPIs -->
