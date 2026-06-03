@@ -12,6 +12,10 @@ const App = {
     'prod-machines':   { label:'Refresh',        icon:'ti-refresh' },
     'prod-schedule':   { label:'This Week',      icon:'ti-calendar' },
     'prod-workorders': { label:'New Work Order', icon:'ti-plus' },
+    'fg-dash':       { label:'Add FG Batch',  icon:'ti-plus' },
+    'fg-inventory':  { label:'Add FG Batch',  icon:'ti-plus' },
+    'fg-qc':         { label:'Log QC',        icon:'ti-microscope' },
+    'fg-storage':    { label:'Refresh',       icon:'ti-refresh' },
     'raw-materials':{ label:'Log Receiving',  icon:'ti-arrow-down-left' },
     inventory:      { label:'Add Material',   icon:'ti-plus' },
     schedule:       { label:'This Week',      icon:'ti-calendar' },
@@ -34,6 +38,8 @@ const App = {
     'rm-receiving':'Receiving / GRN', 'rm-warehouse':'Warehouse Zones',
     'prod-dash':'Production · Dashboard', 'prod-machines':'Machine Operations',
     'prod-schedule':'Production Schedule', 'prod-workorders':'Work Orders',
+    'fg-dash':'Finished Goods · Dashboard', 'fg-inventory':'FG Inventory',
+    'fg-qc':'Quality Control', 'fg-storage':'FG Storage',
     schedule:'Production Schedule', forecast:'AI Demand Forecast', suppliers:'Suppliers', settings:'Settings',
     production:'Production Management', 'finished-goods':'Finished Goods',
     shipping:'Shipping & Dispatch', requests:'Orders & Requests',
@@ -56,6 +62,10 @@ const Pages = {
   'prod-machines':   () => renderProdMachines(),
   'prod-schedule':   () => renderProdSchedule(),
   'prod-workorders': () => renderProdWorkorders(),
+  'fg-dash':       () => renderFgDash(),
+  'fg-inventory':  () => renderFgInventory(),
+  'fg-qc':         () => renderFgQc(),
+  'fg-storage':    () => renderFgStorage(),
   inventory:       () => renderInventory(),
   schedule:        () => renderSchedule(),
   forecast:        () => renderForecast(),
@@ -125,7 +135,7 @@ function landingPage() {
   const byDept = {
     1: 'rm-dash',          // Raw Materials portal
     2: 'prod-dash',        // Production portal
-    // 3: 'fg-dash',       // Finished Goods portal (next)
+    3: 'fg-dash',          // Finished Goods portal
     // 4: 'ship-dash',     // Shipping portal (next)
   };
   return byDept[did] || 'dashboard';
@@ -140,7 +150,9 @@ const NAV_VISIBILITY_BY_DEPT = {
   1: ['rm-dash', 'rm-inventory', 'rm-receiving', 'rm-warehouse', 'notifications', 'audit'],
   // Production dept members see only the Production portal pages + Alerts + Audit Log.
   2: ['prod-dash', 'prod-machines', 'prod-schedule', 'prod-workorders', 'notifications', 'audit'],
-  // 3 (Finished Goods), 4 (Shipping), 5 (HR & Admin) — to be replaced when each portal lands.
+  // Finished Goods dept members see only the FG portal pages + Alerts + Audit Log.
+  3: ['fg-dash', 'fg-inventory', 'fg-qc', 'fg-storage', 'notifications', 'audit'],
+  // 4 (Shipping), 5 (HR & Admin) — to be replaced when each portal lands.
 };
 
 /* Apply department-scoped sidebar visibility. Hides items not in the user's
@@ -208,6 +220,9 @@ function showApp() {
   // Production portal items (visible ONLY to dept-2 non-admin members)
   const showProdPortal = (!isAdmin() && userDeptId === 2);
   $$('.sb-prodportal').forEach(e => e.style.display = showProdPortal ? '' : 'none');
+  // Finished Goods portal items (visible ONLY to dept-3 non-admin members)
+  const showFgPortal = (!isAdmin() && userDeptId === 3);
+  $$('.sb-fgportal').forEach(e => e.style.display = showFgPortal ? '' : 'none');
   // HR / admin-only items (Schedule, Suppliers, AI Forecast, Settings…)
   $$('.sb-hronly').forEach(e => e.style.display = seesAll ? '' : 'none');
   // Apply department-scoped sidebar visibility (hides items not in this
@@ -273,6 +288,10 @@ function pageCTA() {
     'prod-machines':   () => refreshPage(),
     'prod-schedule':   () => refreshPage(),
     'prod-workorders': () => typeof openAddProduction === 'function' && openAddProduction(),
+    'fg-dash':       () => typeof openFgAddEntry === 'function' && openFgAddEntry(),
+    'fg-inventory':  () => typeof openFgAddEntry === 'function' && openFgAddEntry(),
+    'fg-qc':         () => refreshPage(),
+    'fg-storage':    () => refreshPage(),
     inventory:        () => typeof openAddInventory    === 'function' && openAddInventory(),
     schedule:         () => typeof schThisWeek         === 'function' && schThisWeek(),
     forecast:         () => refreshPage(),
