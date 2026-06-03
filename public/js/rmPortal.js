@@ -230,37 +230,40 @@ async function renderRmInventory() {
 }
 
 function _renderRmInvTable(items) {
-  if (items.length === 0) {
+  if (!items || items.length === 0) {
     setHTML('#rm-inv-table-wrap', `<div class="empty-state"><i class="ti ti-box-off"></i><p>No materials found</p></div>`);
     return;
   }
+  const rows = items.map(i => {
+    const qty = Number(i.quantity_on_hand || 0);
+    const reorder = Number(i.reorder_level || 1);
+    const s = _rmpStatus(i);
+    let lastDate = '—';
+    if (i.last_updated) {
+      try { lastDate = new Date(i.last_updated).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }); } catch {}
+    }
+    return `<tr>
+      <td><strong>${esc(i.name)}</strong></td>
+      <td class="mono">${esc(_rmpSku(i))}</td>
+      <td><strong style="color:${s.color}">${fmt(qty)}</strong></td>
+      <td>${esc(i.unit || 'kg')}</td>
+      <td>${fmt(reorder)} ${esc(i.unit || 'kg')}</td>
+      <td>${esc(i.location || '—')}</td>
+      <td style="color:var(--txt2);font-size:11px">${esc(lastDate)}</td>
+      <td><span class="pill ${s.cls}">${s.label}</span></td>
+      <td><div style="display:flex;gap:4px">
+        <button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:var(--green)" onclick="openRmGRN({invId:${i.id}})" title="Receive"><i class="ti ti-truck-loading"></i></button>
+        <button class="icon-btn" style="width:26px;height:26px;font-size:12px" onclick="openRmAdjustItem(${i.id})" title="Adjust"><i class="ti ti-adjustments"></i></button>
+      </div></td>
+    </tr>`;
+  }).join('');
   setHTML('#rm-inv-table-wrap', `
     <div style="overflow-x:auto"><table class="data-table">
       <thead><tr>
         <th>Material Name</th><th>SKU</th><th>On Hand</th><th>Unit</th>
         <th>Reorder Point</th><th>Zone</th><th>Last Received</th><th>Status</th><th>Actions</th>
       </tr></thead>
-      <tbody>
-        ${items.map(i => {
-          const qty = Number(i.quantity_on_hand || 0);
-          const reorder = Number(i.reorder_level || 1);
-          const s = _rmpStatus(i);
-          return `<tr>
-            <td><strong>${esc(i.name)}</strong></td>
-            <td class="mono">${esc(_rmpSku(i))}</td>
-            <td><strong style="color:${s.color}">${fmt(qty)}</strong></td>
-            <td>${esc(i.unit || 'kg')}</td>
-            <td>${fmt(reorder)} ${esc(i.unit || 'kg')}</td>
-            <td>${esc(i.location || '—')}</td>
-            <td style="color:var(--txt2);font-size:11px">${i.last_updated ? new Date(i.last_updated).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}) : '—'}</td>
-            <td><span class="pill ${s.cls}">${s.label}</span></td>
-            <td><div style="display:flex;gap:4px">
-              <button class="icon-btn" style="width:26px;height:26px;font-size:12px;color:var(--green)" onclick="openRmReceiveForItem(${i.id}, '${esc(i.name)}')" title="Receive"><i class="ti ti-truck-loading"></i></button>
-              <button class="icon-btn" style="width:26px;height:26px;font-size:12px" onclick="openRmAdjustItem(${i.id})" title="Adjust"><i class="ti ti-adjustments"></i></button>
-            </div></td>
-          </tr>`;
-        }).join('')}
-      </tbody>
+      <tbody>${rows}</tbody>
     </table></div>
   `);
 }
