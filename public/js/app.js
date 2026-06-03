@@ -4,6 +4,10 @@ const App = {
   page: null,
   CTA: {
     dashboard:      { label:'New Request',    icon:'ti-plus' },
+    'rm-dash':      { label:'Raise GRN',      icon:'ti-truck-loading' },
+    'rm-inventory': { label:'Add Material',   icon:'ti-plus' },
+    'rm-receiving': { label:'Raise GRN',      icon:'ti-truck-loading' },
+    'rm-warehouse': { label:'Refresh',        icon:'ti-refresh' },
     'raw-materials':{ label:'Log Receiving',  icon:'ti-arrow-down-left' },
     inventory:      { label:'Add Material',   icon:'ti-plus' },
     schedule:       { label:'This Week',      icon:'ti-calendar' },
@@ -22,6 +26,8 @@ const App = {
   },
   TITLES: {
     dashboard:'Dashboard', 'raw-materials':'Raw Materials Department', inventory:'Stock & Inventory',
+    'rm-dash':'Raw Materials · Dashboard', 'rm-inventory':'Material Inventory',
+    'rm-receiving':'Receiving / GRN', 'rm-warehouse':'Warehouse Zones',
     schedule:'Production Schedule', forecast:'AI Demand Forecast', suppliers:'Suppliers', settings:'Settings',
     production:'Production Management', 'finished-goods':'Finished Goods',
     shipping:'Shipping & Dispatch', requests:'Orders & Requests',
@@ -36,6 +42,10 @@ const App = {
 const Pages = {
   dashboard:       () => renderDashboard(),
   'raw-materials': () => renderRawMaterials(),
+  'rm-dash':       () => renderRmDash(),
+  'rm-inventory':  () => renderRmInventory(),
+  'rm-receiving':  () => renderRmReceiving(),
+  'rm-warehouse':  () => renderRmWarehouse(),
   inventory:       () => renderInventory(),
   schedule:        () => renderSchedule(),
   forecast:        () => renderForecast(),
@@ -103,10 +113,10 @@ function landingPage() {
   if (isAdmin()) return 'dashboard';
   const did = Number(App.user?.departmentId ?? App.user?.department_id);
   const byDept = {
-    1: 'raw-materials',
-    // 2: 'production-dept',   // build later
-    // 3: 'fg-dept',           // build later
-    // 4: 'shipping-dept',     // build later
+    1: 'rm-dash',          // Raw Materials portal
+    // 2: 'prod-dash',     // Production portal (next)
+    // 3: 'fg-dash',       // Finished Goods portal (next)
+    // 4: 'ship-dash',     // Shipping portal (next)
   };
   return byDept[did] || 'dashboard';
 }
@@ -115,13 +125,12 @@ function landingPage() {
    Each entry lists the pages a member of that department should see in
    the sidebar. Admins always see everything. */
 const NAV_VISIBILITY_BY_DEPT = {
-  // Raw Materials: Dashboard, Raw Materials, Stock & Inventory, Alerts, Audit Log.
-  // Hidden: Analytics, Production, Orders & Requests, Finished Goods, Shipping.
-  1: ['dashboard', 'raw-materials', 'inventory', 'notifications', 'audit'],
-  // Production: Dashboard, Production, Orders & Requests, Alerts, Audit Log.
-  // Hidden: Analytics, Finished Goods, Raw Materials, Stock & Inventory, Shipping.
+  // Raw Materials dept members see only the RM portal (4 pages) + Alerts + Audit Log.
+  // Cross-departmental updates still flow into these pages through the shared API.
+  1: ['rm-dash', 'rm-inventory', 'rm-receiving', 'rm-warehouse', 'notifications', 'audit'],
+  // Production dept (portal pending — current allow-list keeps Production/Orders for them):
   2: ['dashboard', 'production', 'requests', 'notifications', 'audit'],
-  // 3 (Finished Goods), 4 (Shipping), 5 (HR & Admin) — add when built
+  // 3 (Finished Goods), 4 (Shipping), 5 (HR & Admin) — to be replaced when each portal lands.
 };
 
 /* Apply department-scoped sidebar visibility. Hides items not in the user's
@@ -180,9 +189,12 @@ function showApp() {
   const seesAll = isAdmin() || userDeptId === 5;
   // admin nav (Users, Departments)
   $$('.sb-admin').forEach(e => e.style.display = seesAll ? '' : 'none');
-  // Raw Materials nav
+  // Raw Materials nav (the old HR cross-dept view of RM)
   const showRM = seesAll || userDeptId === 1;
   $$('.sb-rawmat').forEach(e => e.style.display = showRM ? '' : 'none');
+  // Raw Materials portal items (visible ONLY to dept-1 non-admin members)
+  const showRmPortal = (!isAdmin() && userDeptId === 1);
+  $$('.sb-rmportal').forEach(e => e.style.display = showRmPortal ? '' : 'none');
   // HR / admin-only items (Schedule, Suppliers, AI Forecast, Settings…)
   $$('.sb-hronly').forEach(e => e.style.display = seesAll ? '' : 'none');
   // Apply department-scoped sidebar visibility (hides items not in this
@@ -196,6 +208,15 @@ function showApp() {
 /* ── Navigation ─────────────────────────────────────────── */
 function goTo(page) {
   if (!Pages[page]) page = 'dashboard';
+  // Route guard: non-admin dept members can only navigate to pages in
+  // their allow-list. Anything else bounces back to their dept landing.
+  if (!isAdmin()) {
+    const did = Number(App.user?.departmentId ?? App.user?.department_id);
+    const allowed = NAV_VISIBILITY_BY_DEPT[did];
+    if (allowed && did !== 5 && !allowed.includes(page)) {
+      page = landingPage();
+    }
+  }
   App.page = page;
   window._pageSearch = null; // reset search handler
 
@@ -231,6 +252,10 @@ function pageCTA() {
   const handlers = {
     dashboard:        () => goTo('requests'),
     'raw-materials':  () => typeof openRMReceiving     === 'function' && openRMReceiving(),
+    'rm-dash':        () => typeof openRmGRN           === 'function' && openRmGRN(),
+    'rm-inventory':   () => typeof openRmAddMaterial   === 'function' && openRmAddMaterial(),
+    'rm-receiving':   () => typeof openRmGRN           === 'function' && openRmGRN(),
+    'rm-warehouse':   () => refreshPage(),
     inventory:        () => typeof openAddInventory    === 'function' && openAddInventory(),
     schedule:         () => typeof schThisWeek         === 'function' && schThisWeek(),
     forecast:         () => refreshPage(),
