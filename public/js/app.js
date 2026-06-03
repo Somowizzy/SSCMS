@@ -8,6 +8,10 @@ const App = {
     'rm-inventory': { label:'Add Material',   icon:'ti-plus' },
     'rm-receiving': { label:'Raise GRN',      icon:'ti-truck-loading' },
     'rm-warehouse': { label:'Refresh',        icon:'ti-refresh' },
+    'prod-dash':       { label:'New Work Order', icon:'ti-plus' },
+    'prod-machines':   { label:'Refresh',        icon:'ti-refresh' },
+    'prod-schedule':   { label:'This Week',      icon:'ti-calendar' },
+    'prod-workorders': { label:'New Work Order', icon:'ti-plus' },
     'raw-materials':{ label:'Log Receiving',  icon:'ti-arrow-down-left' },
     inventory:      { label:'Add Material',   icon:'ti-plus' },
     schedule:       { label:'This Week',      icon:'ti-calendar' },
@@ -28,6 +32,8 @@ const App = {
     dashboard:'Dashboard', 'raw-materials':'Raw Materials Department', inventory:'Stock & Inventory',
     'rm-dash':'Raw Materials · Dashboard', 'rm-inventory':'Material Inventory',
     'rm-receiving':'Receiving / GRN', 'rm-warehouse':'Warehouse Zones',
+    'prod-dash':'Production · Dashboard', 'prod-machines':'Machine Operations',
+    'prod-schedule':'Production Schedule', 'prod-workorders':'Work Orders',
     schedule:'Production Schedule', forecast:'AI Demand Forecast', suppliers:'Suppliers', settings:'Settings',
     production:'Production Management', 'finished-goods':'Finished Goods',
     shipping:'Shipping & Dispatch', requests:'Orders & Requests',
@@ -46,6 +52,10 @@ const Pages = {
   'rm-inventory':  () => renderRmInventory(),
   'rm-receiving':  () => renderRmReceiving(),
   'rm-warehouse':  () => renderRmWarehouse(),
+  'prod-dash':       () => renderProdDash(),
+  'prod-machines':   () => renderProdMachines(),
+  'prod-schedule':   () => renderProdSchedule(),
+  'prod-workorders': () => renderProdWorkorders(),
   inventory:       () => renderInventory(),
   schedule:        () => renderSchedule(),
   forecast:        () => renderForecast(),
@@ -114,7 +124,7 @@ function landingPage() {
   const did = Number(App.user?.departmentId ?? App.user?.department_id);
   const byDept = {
     1: 'rm-dash',          // Raw Materials portal
-    // 2: 'prod-dash',     // Production portal (next)
+    2: 'prod-dash',        // Production portal
     // 3: 'fg-dash',       // Finished Goods portal (next)
     // 4: 'ship-dash',     // Shipping portal (next)
   };
@@ -128,8 +138,8 @@ const NAV_VISIBILITY_BY_DEPT = {
   // Raw Materials dept members see only the RM portal (4 pages) + Alerts + Audit Log.
   // Cross-departmental updates still flow into these pages through the shared API.
   1: ['rm-dash', 'rm-inventory', 'rm-receiving', 'rm-warehouse', 'notifications', 'audit'],
-  // Production dept (portal pending — current allow-list keeps Production/Orders for them):
-  2: ['dashboard', 'production', 'requests', 'notifications', 'audit'],
+  // Production dept members see only the Production portal pages + Alerts + Audit Log.
+  2: ['prod-dash', 'prod-machines', 'prod-schedule', 'prod-workorders', 'notifications', 'audit'],
   // 3 (Finished Goods), 4 (Shipping), 5 (HR & Admin) — to be replaced when each portal lands.
 };
 
@@ -195,6 +205,9 @@ function showApp() {
   // Raw Materials portal items (visible ONLY to dept-1 non-admin members)
   const showRmPortal = (!isAdmin() && userDeptId === 1);
   $$('.sb-rmportal').forEach(e => e.style.display = showRmPortal ? '' : 'none');
+  // Production portal items (visible ONLY to dept-2 non-admin members)
+  const showProdPortal = (!isAdmin() && userDeptId === 2);
+  $$('.sb-prodportal').forEach(e => e.style.display = showProdPortal ? '' : 'none');
   // HR / admin-only items (Schedule, Suppliers, AI Forecast, Settings…)
   $$('.sb-hronly').forEach(e => e.style.display = seesAll ? '' : 'none');
   // Apply department-scoped sidebar visibility (hides items not in this
@@ -256,6 +269,10 @@ function pageCTA() {
     'rm-inventory':   () => typeof openRmAddMaterial   === 'function' && openRmAddMaterial(),
     'rm-receiving':   () => typeof openRmGRN           === 'function' && openRmGRN(),
     'rm-warehouse':   () => refreshPage(),
+    'prod-dash':       () => typeof openAddProduction === 'function' && openAddProduction(),
+    'prod-machines':   () => refreshPage(),
+    'prod-schedule':   () => refreshPage(),
+    'prod-workorders': () => typeof openAddProduction === 'function' && openAddProduction(),
     inventory:        () => typeof openAddInventory    === 'function' && openAddInventory(),
     schedule:         () => typeof schThisWeek         === 'function' && schThisWeek(),
     forecast:         () => refreshPage(),

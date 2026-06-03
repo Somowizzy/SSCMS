@@ -109,6 +109,13 @@
       <div class="sb-item" data-page="dashboard"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
       <div class="sb-item" data-page="reports"><i class="ti ti-chart-line"></i> Analytics</div>
 
+      <!-- Production portal (visible only to dept-2 members) -->
+      <div class="sb-lbl sb-prodportal" style="display:none">Production</div>
+      <div class="sb-item sb-prodportal" data-page="prod-dash"       style="display:none"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+      <div class="sb-item sb-prodportal" data-page="prod-machines"   style="display:none"><i class="ti ti-cpu"></i> Machine Operations</div>
+      <div class="sb-item sb-prodportal" data-page="prod-schedule"   style="display:none"><i class="ti ti-calendar-time"></i> Schedule</div>
+      <div class="sb-item sb-prodportal" data-page="prod-workorders" style="display:none"><i class="ti ti-clipboard-list"></i> Work Orders</div>
+
       <div class="sb-lbl">Production</div>
       <div class="sb-item" data-page="production"><i class="ti ti-settings-2"></i> Production</div>
       <div class="sb-item" data-page="requests"><i class="ti ti-clipboard-list"></i> Orders &amp; Requests <span class="sb-badge" id="badge-requests"></span></div>
@@ -215,6 +222,7 @@
 <script src="/js/notifications.js"></script>
 <script src="/js/rawMaterials.js"></script>
 <script src="/js/rmPortal.js"></script>
+<script src="/js/prodPortal.js"></script>
 <script src="/js/users.js"></script>
 <script src="/js/departments.js"></script>
 <script src="/js/reports.js"></script>
