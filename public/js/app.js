@@ -16,6 +16,10 @@ const App = {
     'fg-inventory':  { label:'Add FG Batch',  icon:'ti-plus' },
     'fg-qc':         { label:'Log QC',        icon:'ti-microscope' },
     'fg-storage':    { label:'Refresh',       icon:'ti-refresh' },
+    'ship-dash':       { label:'New Manifest', icon:'ti-plus' },
+    'ship-manifests':  { label:'New Manifest', icon:'ti-plus' },
+    'ship-schedule':   { label:'Refresh',      icon:'ti-refresh' },
+    'ship-dispatch':   { label:'Refresh',      icon:'ti-refresh' },
     'raw-materials':{ label:'Log Receiving',  icon:'ti-arrow-down-left' },
     inventory:      { label:'Add Material',   icon:'ti-plus' },
     schedule:       { label:'This Week',      icon:'ti-calendar' },
@@ -40,6 +44,8 @@ const App = {
     'prod-schedule':'Production Schedule', 'prod-workorders':'Work Orders',
     'fg-dash':'Finished Goods · Dashboard', 'fg-inventory':'FG Inventory',
     'fg-qc':'Quality Control', 'fg-storage':'FG Storage',
+    'ship-dash':'Shipping · Dashboard', 'ship-manifests':'Shipment Manifests',
+    'ship-schedule':'Delivery Schedule', 'ship-dispatch':'Dispatch Queue',
     schedule:'Production Schedule', forecast:'AI Demand Forecast', suppliers:'Suppliers', settings:'Settings',
     production:'Production Management', 'finished-goods':'Finished Goods',
     shipping:'Shipping & Dispatch', requests:'Orders & Requests',
@@ -66,6 +72,10 @@ const Pages = {
   'fg-inventory':  () => renderFgInventory(),
   'fg-qc':         () => renderFgQc(),
   'fg-storage':    () => renderFgStorage(),
+  'ship-dash':       () => renderShipDash(),
+  'ship-manifests':  () => renderShipManifests(),
+  'ship-schedule':   () => renderShipSchedule(),
+  'ship-dispatch':   () => renderShipDispatch(),
   inventory:       () => renderInventory(),
   schedule:        () => renderSchedule(),
   forecast:        () => renderForecast(),
@@ -136,7 +146,7 @@ function landingPage() {
     1: 'rm-dash',          // Raw Materials portal
     2: 'prod-dash',        // Production portal
     3: 'fg-dash',          // Finished Goods portal
-    // 4: 'ship-dash',     // Shipping portal (next)
+    4: 'ship-dash',        // Shipping portal
   };
   return byDept[did] || 'dashboard';
 }
@@ -152,7 +162,9 @@ const NAV_VISIBILITY_BY_DEPT = {
   2: ['prod-dash', 'prod-machines', 'prod-schedule', 'prod-workorders', 'notifications', 'audit'],
   // Finished Goods dept members see only the FG portal pages + Alerts + Audit Log.
   3: ['fg-dash', 'fg-inventory', 'fg-qc', 'fg-storage', 'notifications', 'audit'],
-  // 4 (Shipping), 5 (HR & Admin) — to be replaced when each portal lands.
+  // Shipping dept members see only the Shipping portal pages + Alerts + Audit Log.
+  4: ['ship-dash', 'ship-manifests', 'ship-schedule', 'ship-dispatch', 'notifications', 'audit'],
+  // 5 (HR & Admin) — handled by the seesAll early-return above.
 };
 
 /* Apply department-scoped sidebar visibility. Hides items not in the user's
@@ -223,6 +235,9 @@ function showApp() {
   // Finished Goods portal items (visible ONLY to dept-3 non-admin members)
   const showFgPortal = (!isAdmin() && userDeptId === 3);
   $$('.sb-fgportal').forEach(e => e.style.display = showFgPortal ? '' : 'none');
+  // Shipping portal items (visible ONLY to dept-4 non-admin members)
+  const showShipPortal = (!isAdmin() && userDeptId === 4);
+  $$('.sb-shipportal').forEach(e => e.style.display = showShipPortal ? '' : 'none');
   // HR / admin-only items (Schedule, Suppliers, AI Forecast, Settings…)
   $$('.sb-hronly').forEach(e => e.style.display = seesAll ? '' : 'none');
   // Apply department-scoped sidebar visibility (hides items not in this
@@ -301,6 +316,10 @@ function pageCTA() {
     'fg-inventory':  () => typeof openFgAddEntry === 'function' && openFgAddEntry(),
     'fg-qc':         () => refreshPage(),
     'fg-storage':    () => refreshPage(),
+    'ship-dash':       () => typeof openAddShipping === 'function' && openAddShipping(),
+    'ship-manifests':  () => typeof openAddShipping === 'function' && openAddShipping(),
+    'ship-schedule':   () => refreshPage(),
+    'ship-dispatch':   () => refreshPage(),
     inventory:        () => typeof openAddInventory    === 'function' && openAddInventory(),
     schedule:         () => typeof schThisWeek         === 'function' && schThisWeek(),
     forecast:         () => refreshPage(),
